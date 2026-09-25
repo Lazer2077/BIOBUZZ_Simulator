@@ -1,28 +1,32 @@
-# BIOBUZZ HIVE 射击与翻转模拟器
+# BIOBUZZ HIVE Shot and Tip Simulator
 
-在线版本：<https://lazer2077.github.io/BIOBUZZ_Simulator/>（GitHub Pages，由 `.github/workflows/pages.yml` 先跑测试再部署）。本地用浏览器打开 `index.html` 即可，无需安装依赖。输入发射点、初速和角度后，页面显示三维轨迹、侧视图及碰撞判定。目标会根据发射点 X 坐标选择较近的红色或蓝色 HIVE。“自动求解角度”在当前初速下寻找无碰撞的开口轨迹；点击“发射一球”才会把命中的球计入 HIVE。
+**English** | [中文](README.zh-CN.md)
 
-## 模型尺寸
+Live version: <https://lazer2077.github.io/BIOBUZZ_Simulator/> (GitHub Pages; `.github/workflows/pages.yml` runs the tests and then deploys). To run locally, open `index.html` in a browser; nothing needs to be installed. The button in the top-right corner switches between Chinese and English, and the choice is remembered in the browser. You can also force a language with `?lang=en` or `?lang=zh`; otherwise the browser language is used.
 
-- 坐标单位为米、秒。X 沿红蓝 HIVE 排列方向，Y 沿同一 HIVE 的两个 CELL 排列方向，Z 向上。原点是框架转轴的地面投影。
-- 框架宽 49.46 in、底座深 38.95 in、转轴高 43.95 in；红蓝 HIVE 中心相距 25.5 in。
-- 图 9-9 中的 18.84 in 是相邻 CELL 之间的间距，旁边还标有 CELL 厚度 12.04 in。用于显示的 CELL 由官方 STEP 直接提取肋框、透明侧板和背板三角网格，保留其真实位置与造型。
-- CELL 开口宽约 20 in、高约 14 in、深约 12 in。图中尖顶以下的侧边高度为 7.61 in。根据官方 CAD 肋框底边 `(Y=0.5096, Z=1.3237) m` 与尖顶 `(Y=0.3054, Z=1.6769) m`，开口高度方向相对水平面约 60°；内侧代理开口取两者之间的净空。
-- POLLEN 直径约 2.8 in、质量 0.055 lb；NECTAR 直径约 3.6 in、质量 0.091 lb。
+Enter a launch point, speed and angles, and the page shows the 3D trajectory, a side view and the collision result. The target is whichever HIVE, red or blue, is closer in X to the launch point. **Solve angle** searches for a collision-free trajectory into the opening at the current launch speed; only **Launch one ball** adds a scoring ball to the HIVE.
 
-来源：[FIRST 官方 STEP 场地 CAD](https://ftc-resources.firstinspires.org/ftc/field/field-cad-step)、[FIRST 2026–27 Competition Manual §9.6、§9.8、§10.3、§10.5](https://ftc-resources.firstinspires.org/ftc/game/manual)、[FIRST CELL 装配指南 §6](https://ftc-resources.firstinspires.org/ftc/field/initialfieldguide)、[官方动画](https://www.youtube.com/watch?v=sUH3z5a5S9I&t=200s)和[AndyMark 球规格](https://andymark.com/products/biobuzz-scoring-elements)。CAD 网格的提取脚本是 `cad/extract_mesh.py`。三维引擎使用本地打包的 Three.js，许可证见 `vendor/THREE-LICENSE.txt`。
+## Model dimensions
 
-## 物理和判定
+- Units are metres and seconds. X runs between the red and blue HIVEs, Y between the two CELLs of one HIVE, and Z is up. The origin is the floor projection of the frame pivot.
+- Frame 49.46 in wide, base 38.95 in deep, pivot 43.95 in high; red and blue HIVE centres 25.5 in apart.
+- The 18.84 in in Figure 9-9 is the spacing between adjacent CELLs; the CELL thickness beside it is 12.04 in. The displayed CELLs use rib, clear side-panel and back-panel triangle meshes extracted directly from the official STEP file, keeping their real position and shape.
+- The CELL opening is about 20 in wide, 14 in high and 12 in deep. The side edges below the apex are 7.61 in. From the official CAD rib bottom edge `(Y=0.5096, Z=1.3237) m` and apex `(Y=0.3054, Z=1.6769) m`, the opening's height direction is about 60° from horizontal; the inner proxy opening uses the clearance between them.
+- POLLEN is about 2.8 in in diameter and 0.055 lb; NECTAR is about 3.6 in and 0.091 lb.
 
-球的自由飞行按 5 ms 步长积分重力与平方阻力 `F = ρ Cd A |v|² / 2`，空气密度取 1.2 kg/m³，迎风面积取 `πd²/4`。界面 `drag` 和 API `drag` 输入的是无量纲 `Cd`，默认 0.5；0.3–1.0 仅供同类穿孔球的灵敏度分析，并非 NECTAR 或 POLLEN 的实测范围。外部封闭侧板和背板使用官方 CAD 三角面进行球体接触检测，内部反弹也从 CAD 三角面求最近接触点与法向量。碰撞树用于加速查询；五边形代理补足 CAD 网格未封闭的边缘，并限制球从非开口侧穿出。球在腔内以 0.5 ms 步长计算，直至弹出开口、静止或到达 3 秒上限；弹簧阻尼与切向摩擦近似球的压缩和回弹。轨迹画球心，橙点画接触点。留球由腔体内位置与最终速度决定，与碰撞次数无关。初始三颗 NECTAR 用重力、壁面软接触及球间接触先行沉降；新球留在腔体后也重新沉降。测试检查初始球与 CAD 肋框、侧板、背板的净空。边缘代理仍有几何误差，上机前应按实物校验。
+Sources: [FIRST official STEP field CAD](https://ftc-resources.firstinspires.org/ftc/field/field-cad-step), [FIRST 2026–27 Competition Manual §9.6, §9.8, §10.3, §10.5](https://ftc-resources.firstinspires.org/ftc/game/manual), [FIRST CELL assembly guide §6](https://ftc-resources.firstinspires.org/ftc/field/initialfieldguide), the [official animation](https://www.youtube.com/watch?v=sUH3z5a5S9I&t=200s) and [AndyMark ball specifications](https://andymark.com/products/biobuzz-scoring-elements). The CAD mesh is extracted by `cad/extract_mesh.py`. The 3D engine is a bundled copy of Three.js; its license is in `vendor/THREE-LICENSE.txt`.
 
-官方比赛初始状态下，每个向上 CELL 有 3 颗 NECTAR，按手册 §10.3.1 贴住背板、沿靠近本联盟区一侧排成一行（红色靠 −X，蓝色靠 +X）。模拟器据此显示初始球数，并将它们视作平衡调校的基线；后续进入的球按 AndyMark 质量增加附加力矩。附加力矩达到界面中的释放阈值后，HIVE 以转动惯量、恢复力和阻尼的简化方程下坠到另一稳定姿态；随后新 CELL 朝上并重新瞄准。翻转后模型将原 CELL 中的球移出计数。
+## Physics and scoring logic
 
-**标定限制：** FIRST 手册没有给出翻转力矩、转动惯量、阻尼、球体接触刚度或 NECTAR 阻力系数；这些默认参数都是演示值。球体用集中质量和可压缩接触近似，尚未使用有限元计算球壳变形，也未模拟篮筐柔性。沉降中的球间接触已计算，但飞入的新球尚未与已存球共同进行动态碰撞求解，因此满载 CELL 的留球预测仍有误差。实际留球率、翻转时间与所需球数应在实物场地上测量后调整。阻力方程见 [NASA](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/drag-equation/)；穿孔球阻力对孔径与孔隙率敏感，见 [floorball 球实验研究](https://odr.chalmers.se/items/dc68b2a3-48e5-4090-bb6b-023005930f18)和[穿孔空心球风洞研究](https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/drag-on-a-hollow-sphere-can-increase-with-porosity/96AC0BED872B41FDE7C447214028BA77)。
+Free flight integrates gravity and quadratic drag `F = ρ Cd A |v|² / 2` in 5 ms steps, with air density 1.2 kg/m³ and frontal area `πd²/4`. The `drag` input in the page and the API is the dimensionless `Cd`, default 0.5; 0.3–1.0 is for sensitivity analysis on similar perforated balls and is not a measured range for NECTAR or POLLEN. The closed outer side and back panels use the official CAD triangles for sphere contact, and interior bounces also take the nearest contact point and normal from the CAD triangles. A bounding-volume tree speeds up queries; a pentagon proxy fills the unclosed edges of the CAD mesh and stops balls leaving through anything but the opening. Inside the CELL the ball is simulated in 0.5 ms steps until it bounces out of the opening, comes to rest or reaches a 3 s limit; spring-damper contact with tangential friction approximates ball compression and rebound. The trajectory shows the ball centre and orange dots show contact points. Retention depends on the ball's final position and speed inside the CELL, not on the number of contacts. The three starting NECTAR first settle under gravity, soft wall contact and ball-to-ball contact; a newly retained ball is settled again with them. The tests check the clearance of the starting balls from the CAD ribs, side panels and back panel. The edge proxy still has geometric error; check against a real field before relying on it on a robot.
 
-## 控制算法接口
+At the start of an official match each upward CELL holds 3 NECTAR, placed against the back wall in a line along the side nearest that alliance's ALLIANCE AREA (manual §10.3.1: red toward −X, blue toward +X). The simulator shows these starting balls and treats them as the balance baseline; each later ball adds torque based on its AndyMark mass. When the added torque reaches the release threshold set in the page, the HIVE falls to its other stable pose following a simplified equation with moment of inertia, restoring force and damping; the other CELL then faces up and becomes the new target. After a tip, the balls in the original CELL are removed from the count.
 
-页面提供全局 `window.HiveControl`，输入为米、米每秒、角度、牛顿米和秒。目标 HIVE 永远按发射点 X 坐标选最近的一组。接口调用会同步更新页面控件，便于检查算法结果。
+**Calibration limits:** the FIRST manual does not give the tip torque, moment of inertia, damping, ball contact stiffness or NECTAR drag coefficient; all of these defaults are placeholders. Balls are modelled as lumped masses with compressible contact; shell deformation is not solved with finite elements and CELL flexibility is not modelled. Ball-to-ball contact is included while settling, but an incoming ball does not yet collide dynamically with balls already in the CELL, so retention predictions for a full CELL are still approximate. Measure real retention rates, tip timing and the number of balls needed on a physical field and adjust the parameters. See [NASA](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/drag-equation/) for the drag equation; drag on perforated balls is sensitive to hole size and porosity, see the [floorball ball experiments](https://odr.chalmers.se/items/dc68b2a3-48e5-4090-bb6b-023005930f18) and the [wind-tunnel study of perforated hollow spheres](https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/drag-on-a-hollow-sphere-can-increase-with-porosity/96AC0BED872B41FDE7C447214028BA77).
+
+## Control API
+
+The page exposes a global `window.HiveControl`. Inputs are in metres, metres per second, degrees, newton-metres and seconds. The target is always the HIVE nearest the launch point in X. API calls also update the page controls so you can inspect the result.
 
 ```js
 const solution = HiveControl.solve({
@@ -36,32 +40,34 @@ if (solution.status === 'hit') {
 }
 ```
 
-接口方法：
+Methods:
 
-- `getState()`：返回红蓝 HIVE 的向上 CELL、球数、翻转次数和当前最近目标。
-- `predict({...})`：使用给定 `angleDeg`、`yawDeg` 预测一次发射；状态为 `hit`、`collision` 或 `miss`，并返回 `internalCollisions` 与 `retained`，不计入球数。
-- `solve({...})`：在给定发射点、初速和球种下寻找无碰撞的角度；无解时返回 `unreachable`。
-- `fire({...})`：执行当前参数的一次发射；命中后增加球数，并在达到阈值时推进 HIVE 到下一稳定状态。此 API 即时完成计算，界面按钮则播放动画。
-- `reset()`：恢复官方比赛初始方向和每组 3 颗 NECTAR。
+- `getState()`: the upward CELL, ball counts and tip count for each HIVE, and the current nearest target.
+- `predict({...})`: predicts one launch with the given `angleDeg` and `yawDeg`; status is `hit`, `collision` or `miss`, with `internalCollisions` and `retained`. Nothing is added to the ball count.
+- `solve({...})`: searches for a collision-free angle for the given launch point, speed and ball type; returns `unreachable` if none exists.
+- `fire({...})`: performs one launch with the current parameters; a hit adds the ball, and the HIVE advances to its next stable pose once the threshold is reached. The API computes this instantly; the page button animates it.
+- `reset()`: restores the official starting orientation with 3 NECTAR per HIVE.
 
-运行 `node collision.test.js` 可验证碰撞、最近 HIVE 选择、自动命中、翻转后的再次瞄准以及控制接口。
+Collision `kind` values returned by the API (`封闭背板` closed back panel, `侧面` side panel, `开口边框` opening rim, `内壁 n` inner wall n) are fixed identifiers and do not change with the page language.
 
-## 与官方资料核对（2026-27 Competition Manual TU02）
+Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API and the Chinese and English page text.
 
-| 项目 | 官方值 | 模拟器 | 结论 |
+## Check against official sources (2026-27 Competition Manual TU02)
+
+| Item | Official value | Simulator | Result |
 |---|---|---|---|
-| 框架宽 / 底深 / 转轴高 | 49.46 / 38.95 / 43.95 in（§9.6.1） | 相同 | ✓ |
-| 红蓝 HIVE 中心距 | 25.5 in（图 9-10） | 25.5 in | ✓ |
-| 稳定姿态 | 臂与水平 ±30°，翻转 60°（图 9-10） | 60° | ✓ |
-| CELL 开口 | 约 20 × 14 × 12 in（§9.6.2） | 同值 + 官方 STEP 网格 | ✓ |
-| 开口底 / 顶离地 | 53.5 / 65.6 in（图 9-10） | CAD 肋框外缘 52.1 / 66.0 in | 在“约”值误差内 |
-| POLLEN / NECTAR | 2.8 in、0.055 lb / 3.6 in、0.091 lb（§9.8、AndyMark） | 相同 | ✓ |
-| 初始状态 | 红色观众侧 CELL 朝上、蓝色远端 CELL 朝上，各 3 NECTAR（图 10-2） | 相同 | ✓ |
-| 翻转得分 / 留球得分 | TIP 20 分；比赛结束时朝上 CELL 内每球 2 分（表 10-2） | 翻转后原 CELL 球清空 | ✓ |
+| Frame width / base depth / pivot height | 49.46 / 38.95 / 43.95 in (§9.6.1) | Same | ✓ |
+| Red–blue HIVE centre spacing | 25.5 in (Fig. 9-10) | 25.5 in | ✓ |
+| Stable poses | Arm ±30° from horizontal, 60° per tip (Fig. 9-10) | 60° | ✓ |
+| CELL opening | About 20 × 14 × 12 in (§9.6.2) | Same, plus official STEP mesh | ✓ |
+| Opening bottom / top above tiles | 53.5 / 65.6 in (Fig. 9-10) | CAD rib outer edge 52.1 / 66.0 in | Within the "approximately" tolerance |
+| POLLEN / NECTAR | 2.8 in, 0.055 lb / 3.6 in, 0.091 lb (§9.8, AndyMark) | Same | ✓ |
+| Starting state | Red audience-side CELL up, blue far-side CELL up, 3 NECTAR each (Fig. 10-2) | Same | ✓ |
+| Tip / retained-ball points | TIP 20 points; 2 points per ball left in an upward CELL at match end (Table 10-2) | Original CELL emptied after a tip | ✓ |
 
-已修正的问题：
+Fixed issues:
 
-1. **朝下 CELL 的代理几何位置错误（约 19 cm）。** 官方 CAD 中 HIVE 关于转轴竖直面镜像对称（两个 CELL 都位于连杆同一侧），原代码却按绕转轴点对称生成朝下 CELL。结果：翻转后求解器瞄准的开口、开口平面穿越判定和腔内坐标系都偏离实际 CAD CELL 约 19 cm（绕转轴约 26°），朝下 CELL 的开口边框也会在空处产生虚假碰撞。现在朝下 CELL 由同侧朝上姿态绕转轴旋转 60° 得到，四个 CELL 在两种稳定姿态下与 CAD 的偏差都在 1 cm 内；`collision.test.js` 新增回归断言。
-2. **初始 NECTAR 摆放。** 原先居中摆放，现按手册靠本联盟一侧排列。
+1. **Downward CELL proxy geometry was misplaced by about 19 cm.** In the official CAD each HIVE is mirror-symmetric about the vertical plane through its pivot (both CELLs sit on the same side of the arm), but the original code built the downward CELL by point symmetry about the pivot. As a result, after a tip the opening the solver aimed at, the opening-plane crossing test and the in-CELL coordinate frame were all about 19 cm (about 26° around the pivot) away from the real CAD CELL, and the downward CELL's opening rim caused false collisions in empty space. The downward CELL is now the same side's upward pose rotated 60° about the pivot; all four CELLs match the CAD within 1 cm in both stable poses, and `collision.test.js` has a regression check.
+2. **Starting NECTAR placement.** They were centred; they now sit toward the alliance's own side as the manual specifies.
 
-仍属假设、需要实测标定的部分见上文“标定限制”：翻转阈值（默认 0.30 N·m 对应 3 颗 NECTAR 之外约 4 颗 POLLEN）、阻力系数、接触刚度与阻尼、翻转动力学。另外，模拟器按发射点 X 自动选择最近的 HIVE；比赛中各联盟只能向本色 HIVE 发射（§10.5.1、G417），使用时请让发射点位于本联盟 HIVE 一侧。
+Still assumed and needing measurement (see "Calibration limits" above): the tip threshold (the default 0.30 N·m means about 4 POLLEN on top of the 3 NECTAR), drag coefficient, contact stiffness and damping, and tip dynamics. Also, the simulator picks the HIVE nearest the launch point in X, but in a match each alliance may only launch into the HIVE of its own colour (§10.5.1, G417), so keep the launch point on your alliance's HIVE side.

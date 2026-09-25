@@ -2,31 +2,31 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BIOBUZZ HIVE 射击模拟器</title>
+<title data-i18n="title">BIOBUZZ HIVE 射击模拟器</title>
 <style>
-:root{font-family:system-ui,"Microsoft YaHei",sans-serif;color:#eaf0f8;background:#0d1420}*{box-sizing:border-box}body{margin:0}header{padding:18px 24px;background:#172335;border-bottom:1px solid #304158}h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#9fb2c8;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;min-height:calc(100vh - 83px)}main{padding:16px;min-width:0}.panel{background:#142033;border:1px solid #31445b;border-radius:12px;padding:14px}.views{display:grid;grid-template-columns:2fr 1fr;gap:12px}canvas{width:100%;height:530px;display:block;background:#101b2a;border-radius:8px;cursor:grab}canvas:active{cursor:grabbing}aside{padding:16px;background:#111d2d;border-left:1px solid #304158;overflow:auto}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:20px 0 9px;color:#b4c9df}.field{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:8px;margin:9px 0}.field label{font-size:13px;color:#c4d2e1}.field input,.field select{width:100%;background:#1e3046;color:#fff;border:1px solid #49627c;border-radius:6px;padding:6px}.field input:focus,.field select:focus{outline:2px solid #48b5f5}button{background:#286aa3;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;margin:4px 4px 4px 0}button:hover{background:#3487cd}.result{margin-top:14px;padding:12px;border-radius:8px;background:#1c3044;line-height:1.55;font-size:13px}.hit{color:#61e5a0}.miss{color:#ffbd77}.legend{font-size:12px;color:#9fb2c8;line-height:1.6;margin-top:12px}.note{font-size:12px;color:#aebfd0;line-height:1.5;margin-top:12px}a{color:#8cccff}@media(max-width:950px){.layout{display:block}.views{grid-template-columns:1fr}canvas{height:380px}aside{border-left:0}}
+:root{font-family:system-ui,"Microsoft YaHei",sans-serif;color:#eaf0f8;background:#0d1420}*{box-sizing:border-box}body{margin:0}header{padding:18px 24px;background:#172335;border-bottom:1px solid #304158}h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#9fb2c8;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;min-height:calc(100vh - 83px)}main{padding:16px;min-width:0}.panel{background:#142033;border:1px solid #31445b;border-radius:12px;padding:14px}.views{display:grid;grid-template-columns:2fr 1fr;gap:12px}canvas{width:100%;height:530px;display:block;background:#101b2a;border-radius:8px;cursor:grab}canvas:active{cursor:grabbing}aside{padding:16px;background:#111d2d;border-left:1px solid #304158;overflow:auto}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:20px 0 9px;color:#b4c9df}.field{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:8px;margin:9px 0}.field label{font-size:13px;color:#c4d2e1}.field input,.field select{width:100%;background:#1e3046;color:#fff;border:1px solid #49627c;border-radius:6px;padding:6px}.field input:focus,.field select:focus{outline:2px solid #48b5f5}button{background:#286aa3;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;margin:4px 4px 4px 0}button:hover{background:#3487cd}.result{margin-top:14px;padding:12px;border-radius:8px;background:#1c3044;line-height:1.55;font-size:13px}.hit{color:#61e5a0}.miss{color:#ffbd77}.legend{font-size:12px;color:#9fb2c8;line-height:1.6;margin-top:12px}.note{font-size:12px;color:#aebfd0;line-height:1.5;margin-top:12px}a{color:#8cccff}.headline{display:flex;align-items:center;justify-content:space-between;gap:12px}.lang{margin:0;padding:6px 12px;background:#1e3046;border:1px solid #49627c;font-size:13px}.lang:hover{background:#2a4360}@media(max-width:950px){.layout{display:block}.views{grid-template-columns:1fr}canvas{height:380px}aside{border-left:0}}
 </style>
 </head>
 <body>
-<header><h1>FTC BIOBUZZ · HIVE 射击模拟器</h1><p>SI 单位计算；左右拖动三维视图绕 Z 轴旋转，滚轮放大或缩小视图。轨迹和开口尺寸用于高射控制算法初步验证。</p></header>
-<div class="layout"><main><div class="views"><section class="panel"><h2>三维场景</h2><canvas id="scene"></canvas></section><section class="panel"><h2>侧视图 / 轨迹</h2><canvas id="side"></canvas></section></div><p class="legend">蓝色 / 红色：两组 HIVE；黄色：所选开口；青色：球轨迹；白色：发射点。坐标：X 沿红蓝 HIVE 排列方向，Y 沿每组两个 CELL 排列方向，Z 向上。中心转轴位于 X=0、Y=0。</p></main>
-<aside><h2>发射与目标</h2>
-<div class="field"><label for="team">最近的 HIVE</label><select id="team" disabled><option value="red">红色</option><option value="blue">蓝色</option></select></div>
-<div class="field"><label for="state">朝上的 CELL</label><select id="state" disabled><option value="1">+Y 侧</option><option value="-1">−Y 侧</option></select></div>
-<div class="field"><label for="x">发射点 X (m)</label><input id="x" type="number" step="0.01" value="-0.6"></div>
-<div class="field"><label for="y">发射点 Y (m)</label><input id="y" type="number" step="0.01" value="1.8"></div>
-<div class="field"><label for="z">发射高度 Z (m)</label><input id="z" type="number" min="0.05" step="0.01" value="0.55"></div>
-<div class="field"><label for="speed">初速 (m/s)</label><input id="speed" type="number" min="0.1" step="0.1" value="6.5"></div>
-<div class="field"><label for="angle">仰角 (°)</label><input id="angle" type="number" min="-10" max="89" step="0.1" value="52"></div>
-<div class="field"><label for="yaw">水平角 (°)</label><input id="yaw" type="number" min="-180" max="180" step="0.1" value="90"></div>
-<div class="field"><label for="diameter">球直径</label><select id="diameter"><option value="0.071">POLLEN 71 mm</option><option value="0.091">NECTAR 91 mm</option></select></div>
-<div class="field"><label for="drag">阻力系数 Cᴅ (估算 0.3–1.0)</label><input id="drag" type="number" min="0" max="1.5" step="0.05" value="0.5"></div>
-<div class="field"><label for="threshold">翻转附加力矩 (N·m)</label><input id="threshold" type="number" min="0.01" step="0.01" value="0.30"></div>
-<button id="aim">自动求解角度</button><button id="play">发射一球</button><button id="reset">重置视角</button><button id="resetHive">重置 HIVE</button>
+<header><div class="headline"><h1 data-i18n="heading">FTC BIOBUZZ · HIVE 射击模拟器</h1><button id="lang" type="button" class="lang" aria-label="Switch language">English</button></div><p data-i18n="intro">SI 单位计算；左右拖动三维视图绕 Z 轴旋转，滚轮放大或缩小视图。轨迹和开口尺寸用于高射控制算法初步验证。</p></header>
+<div class="layout"><main><div class="views"><section class="panel"><h2 data-i18n="scene">三维场景</h2><canvas id="scene"></canvas></section><section class="panel"><h2 data-i18n="sideView">侧视图 / 轨迹</h2><canvas id="side"></canvas></section></div><p class="legend" data-i18n="legend">蓝色 / 红色：两组 HIVE；黄色：所选开口；青色：球轨迹；白色：发射点。坐标：X 沿红蓝 HIVE 排列方向，Y 沿每组两个 CELL 排列方向，Z 向上。中心转轴位于 X=0、Y=0。</p></main>
+<aside><h2 data-i18n="launch">发射与目标</h2>
+<div class="field"><label for="team" data-i18n="team">最近的 HIVE</label><select id="team" disabled><option value="red" data-i18n="red">红色</option><option value="blue" data-i18n="blue">蓝色</option></select></div>
+<div class="field"><label for="state" data-i18n="upCell">朝上的 CELL</label><select id="state" disabled><option value="1" data-i18n="plusY">+Y 侧</option><option value="-1" data-i18n="minusY">−Y 侧</option></select></div>
+<div class="field"><label for="x" data-i18n="x">发射点 X (m)</label><input id="x" type="number" step="0.01" value="-0.6"></div>
+<div class="field"><label for="y" data-i18n="y">发射点 Y (m)</label><input id="y" type="number" step="0.01" value="1.8"></div>
+<div class="field"><label for="z" data-i18n="z">发射高度 Z (m)</label><input id="z" type="number" min="0.05" step="0.01" value="0.55"></div>
+<div class="field"><label for="speed" data-i18n="speed">初速 (m/s)</label><input id="speed" type="number" min="0.1" step="0.1" value="6.5"></div>
+<div class="field"><label for="angle" data-i18n="angle">仰角 (°)</label><input id="angle" type="number" min="-10" max="89" step="0.1" value="52"></div>
+<div class="field"><label for="yaw" data-i18n="yaw">水平角 (°)</label><input id="yaw" type="number" min="-180" max="180" step="0.1" value="90"></div>
+<div class="field"><label for="diameter" data-i18n="ball">球直径</label><select id="diameter"><option value="0.071">POLLEN 71 mm</option><option value="0.091">NECTAR 91 mm</option></select></div>
+<div class="field"><label for="drag" data-i18n="drag">阻力系数 Cᴅ (估算 0.3–1.0)</label><input id="drag" type="number" min="0" max="1.5" step="0.05" value="0.5"></div>
+<div class="field"><label for="threshold" data-i18n="threshold">翻转附加力矩 (N·m)</label><input id="threshold" type="number" min="0.01" step="0.01" value="0.30"></div>
+<button id="aim" data-i18n="aim">自动求解角度</button><button id="play" data-i18n="play">发射一球</button><button id="reset" data-i18n="resetView">重置视角</button><button id="resetHive" data-i18n="resetHive">重置 HIVE</button>
 <div class="result" id="result"></div>
 <div class="result" id="balance"></div>
-<div class="note">飞行采用平方阻力，Cᴅ=0.3–1.0 是同类穿孔球的探索范围，不是 NECTAR 实测值。CELL 内外的侧板和背板按 CAD 网格计算；边缘用与 CAD 对齐的五边形约束，弹簧阻尼接触追踪至弹出、静止或 3 秒上限。橙点标出接触位置。碰撞次数仅供观察，不决定留球。初始三颗球先经重力和球间接触沉降。球体弹性与最终留球率须实测标定。</div>
-<div class="note">资料：<a href="https://ftc-resources.firstinspires.org/ftc/game/manual" target="_blank">竞赛手册 §9.6、§10.3、§10.5</a> · <a href="https://ftc-resources.firstinspires.org/ftc/field/initialfieldguide" target="_blank">CELL 装配指南</a> · <a href="https://andymark.com/products/biobuzz-scoring-elements" target="_blank">球重量</a> · <a href="https://www.youtube.com/watch?v=sUH3z5a5S9I&t=200s" target="_blank">官方动画</a></div>
+<div class="note" data-i18n="note">飞行采用平方阻力，Cᴅ=0.3–1.0 是同类穿孔球的探索范围，不是 NECTAR 实测值。CELL 内外的侧板和背板按 CAD 网格计算；边缘用与 CAD 对齐的五边形约束，弹簧阻尼接触追踪至弹出、静止或 3 秒上限。橙点标出接触位置。碰撞次数仅供观察，不决定留球。初始三颗球先经重力和球间接触沉降。球体弹性与最终留球率须实测标定。</div>
+<div class="note" data-i18n-html="sources">资料：<a href="https://ftc-resources.firstinspires.org/ftc/game/manual" target="_blank">竞赛手册 §9.6、§10.3、§10.5</a> · <a href="https://ftc-resources.firstinspires.org/ftc/field/initialfieldguide" target="_blank">CELL 装配指南</a> · <a href="https://andymark.com/products/biobuzz-scoring-elements" target="_blank">球重量</a> · <a href="https://www.youtube.com/watch?v=sUH3z5a5S9I&t=200s" target="_blank">官方动画</a></div>
 </aside></div>
 <script src="vendor/three.min.js"></script>
 <script src="cad/hive-mesh.js"></script>
@@ -43,6 +43,34 @@ const scene=document.getElementById('scene'),side=document.getElementById('side'
 const fixedElevation=.39, ballMass={pollen:.055*.45359237,nectar:.091*.45359237},lever=.392;
 const AIR_DENSITY=1.2,CONTACT_STIFFNESS=4200,CONTACT_DAMPING=7,CONTACT_FRICTION=.35;
 const ballType=()=>el.diameter.value==='0.071'?'pollen':'nectar';
+const I18N={
+ zh:{title:'BIOBUZZ HIVE 射击模拟器',heading:'FTC BIOBUZZ · HIVE 射击模拟器',intro:'SI 单位计算；左右拖动三维视图绕 Z 轴旋转，滚轮放大或缩小视图。轨迹和开口尺寸用于高射控制算法初步验证。',scene:'三维场景',sideView:'侧视图 / 轨迹',
+  legend:'蓝色 / 红色：两组 HIVE；黄色：所选开口；青色：球轨迹；白色：发射点。坐标：X 沿红蓝 HIVE 排列方向，Y 沿每组两个 CELL 排列方向，Z 向上。中心转轴位于 X=0、Y=0。',launch:'发射与目标',team:'最近的 HIVE',red:'红色',blue:'蓝色',upCell:'朝上的 CELL',plusY:'+Y 侧',minusY:'−Y 侧',
+  x:'发射点 X (m)',y:'发射点 Y (m)',z:'发射高度 Z (m)',speed:'初速 (m/s)',angle:'仰角 (°)',yaw:'水平角 (°)',ball:'球直径',drag:'阻力系数 Cᴅ (估算 0.3–1.0)',threshold:'翻转附加力矩 (N·m)',aim:'自动求解角度',play:'发射一球',resetView:'重置视角',resetHive:'重置 HIVE',
+  note:'飞行采用平方阻力，Cᴅ=0.3–1.0 是同类穿孔球的探索范围，不是 NECTAR 实测值。CELL 内外的侧板和背板按 CAD 网格计算；边缘用与 CAD 对齐的五边形约束，弹簧阻尼接触追踪至弹出、静止或 3 秒上限。橙点标出接触位置。碰撞次数仅供观察，不决定留球。初始三颗球先经重力和球间接触沉降。球体弹性与最终留球率须实测标定。',
+  sources:['资料：','竞赛手册 §9.6、§10.3、§10.5','CELL 装配指南','球重量','官方动画'],switchTo:'English',
+  kinds:{'封闭背板':'封闭背板','侧面':'侧面','开口边框':'开口边框','内壁':'内壁'},
+  collided:k=>`碰到 CELL ${k}，投射失败`,collisionTime:'碰撞时间：',collisionAt:'碰撞位置 ',retained:'命中开口并留在 CELL',notRetained:'进入开口，但未留在 CELL',notEntered:'未进入开口',crossing:'穿越开口平面：',crossPoint:'交点 ',offset:'相对开口中心：',
+  escaped:'从开口弹出；',settled:'已在腔体内静止；',unsettled:'在追踪时限内尚未稳定；',contacts:(n,list)=>`内部碰撞 ${n} 次；前三次：${list||'无'}`,listSep:'、',noCross:'未穿越开口平面',closest:d=>`轨迹距目标中心最近约 ${d} cm`,
+  hive:n=>n==='red'?'红 HIVE':'蓝 HIVE',balance:(up,nectar,pollen,tips)=>`：朝上 ${up}，${nectar} NECTAR + ${pollen} POLLEN，翻转 ${tips} 次`,torque:'附加力矩 ',falling:' · 正在下坠',noSolution:'当前初速下没有找到可进入开口的角度；试着提高初速或调整发射点。'},
+ en:{title:'BIOBUZZ HIVE Shot Simulator',heading:'FTC BIOBUZZ · HIVE Shot Simulator',intro:'SI units. Drag the 3D view left or right to orbit around Z; scroll to zoom. Trajectories and opening dimensions are for early validation of launcher control algorithms.',scene:'3D scene',sideView:'Side view / trajectory',
+  legend:'Blue / red: the two HIVEs; yellow: selected opening; cyan: ball trajectory; white: launch point. Axes: X runs between the red and blue HIVEs, Y between the two CELLs of a HIVE, Z is up. The pivot is at X=0, Y=0.',launch:'Launch and target',team:'Nearest HIVE',red:'Red',blue:'Blue',upCell:'Upward CELL',plusY:'+Y side',minusY:'−Y side',
+  x:'Launch X (m)',y:'Launch Y (m)',z:'Launch height Z (m)',speed:'Launch speed (m/s)',angle:'Elevation (°)',yaw:'Yaw (°)',ball:'Ball',drag:'Drag coefficient Cᴅ (est. 0.3–1.0)',threshold:'Tip torque threshold (N·m)',aim:'Solve angle',play:'Launch one ball',resetView:'Reset view',resetHive:'Reset HIVEs',
+  note:'Flight uses quadratic drag; Cᴅ = 0.3–1.0 is an exploratory range for similar perforated balls, not a measured NECTAR value. CELL side and back panels use the CAD mesh; edges use a pentagon proxy aligned with the CAD, and spring-damper contact is tracked until the ball escapes, settles or 3 s elapse. Orange dots mark contacts. Contact count is informational and does not decide retention. The three starting balls first settle under gravity and ball-to-ball contact. Ball elasticity and real retention rates must be calibrated on a physical field.',
+  sources:['Sources: ','Competition Manual §9.6, §10.3, §10.5','CELL assembly guide','Ball weights','Official animation'],switchTo:'中文',
+  kinds:{'封闭背板':'closed back panel','侧面':'side panel','开口边框':'opening rim','内壁':'inner wall'},
+  collided:k=>`Hit the CELL ${k}; shot failed`,collisionTime:'Contact time: ',collisionAt:'Contact at ',retained:'Entered the opening and stayed in the CELL',notRetained:'Entered the opening but did not stay in the CELL',notEntered:'Did not enter the opening',crossing:'Opening plane crossed: ',crossPoint:'Crossing ',offset:'From opening centre: ',
+  escaped:'Bounced back out of the opening; ',settled:'Came to rest inside the CELL; ',unsettled:'Not yet at rest within the tracking limit; ',contacts:(n,list)=>`${n} internal contact${n===1?'':'s'}; first three: ${list||'none'}`,listSep:', ',noCross:'Did not cross the opening plane',closest:d=>`Closest approach to the target centre ≈ ${d} cm`,
+  hive:n=>n==='red'?'Red HIVE':'Blue HIVE',balance:(up,nectar,pollen,tips)=>`: ${up} up, ${nectar} NECTAR + ${pollen} POLLEN, ${tips} tip${tips===1?'':'s'}`,torque:'Added torque ',falling:' · tipping',noSolution:'No angle at this launch speed enters the opening; try a higher speed or a different launch point.'}};
+function initialLanguage(){try{let q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q;let saved=localStorage.getItem('biobuzz-lang');if(saved==='en'||saved==='zh')return saved}catch(e){}
+ return typeof navigator!=='undefined'&&navigator.language&&!/^zh/i.test(navigator.language)?'en':'zh'}
+let lang=initialLanguage();const T=()=>I18N[lang];
+// Collision kinds stay Chinese identifiers in the API; only the displayed text is translated.
+const kindLabel=kind=>kind.replace(/^(封闭背板|侧面|开口边框|内壁)/,k=>T().kinds[k]);
+function applyLanguage(){if(typeof document.querySelectorAll!=='function')return;let d=T();document.documentElement.lang=lang==='zh'?'zh-CN':'en';
+ document.querySelectorAll('[data-i18n]').forEach(node=>{node.textContent=d[node.dataset.i18n]});
+ document.querySelectorAll('[data-i18n-html="sources"]').forEach(node=>{let links=node.querySelectorAll('a');node.firstChild.textContent=d.sources[0];links.forEach((a,i)=>a.textContent=d.sources[i+1])});
+ let button=document.getElementById('lang');if(button)button.textContent=d.switchTo}
 const newHive=name=>({up:name==='red'?1:-1,addedMass:0,pollen:0,nectar:3,tips:0,angle:0,omega:0,moving:false,
  // Manual §10.3.1: staged against the back wall, in a line against the side nearest that ALLIANCE AREA (red −X, blue +X).
  balls:[.2,.107,.014].map(u=>({type:'nectar',u:(name==='red'?-1:1)*u,v:.09,depth:.12,vu:0,vv:0,vd:0}))});
@@ -160,10 +188,10 @@ function integrate(){
   return {arr,cross,wall,inside};
 }
 function compute(){syncTeam();let r=integrate();samples=r.arr;hit=r.cross;collision=r.wall;insideResult=r.inside;let t=target();let closest=samples.reduce((a,p)=>Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)<a.d?{p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)}:a,{d:Infinity});
-  result.innerHTML=collision?`<strong class="miss">碰到 CELL ${collision.kind}，投射失败</strong><br>碰撞时间：${collision.t.toFixed(3)} s<br>碰撞位置 X=${collision.x.toFixed(3)}, Y=${collision.y.toFixed(3)}, Z=${collision.z.toFixed(3)} m`:hit?(hit.inside?`<strong class="${insideResult?.retained?'hit':'miss'}">${insideResult?.retained?'命中开口并留在 CELL':'进入开口，但未留在 CELL'}</strong>`:'<strong class="miss">未进入开口</strong>')+`<br>穿越开口平面：t=${hit.t.toFixed(3)} s<br>交点 X=${hit.x.toFixed(3)}, Y=${hit.y.toFixed(3)}, Z=${hit.z.toFixed(3)} m<br>相对开口中心：ΔX=${((hit.x-t.x)*100).toFixed(1)} cm, ΔY=${((hit.y-t.y)*100).toFixed(1)} cm`+(insideResult?`<br>${insideResult.escaped?'从开口弹出；':insideResult.retained?'已在腔体内静止；':'在追踪时限内尚未稳定；'}内部碰撞 ${insideResult.events.length} 次；前三次：${insideResult.events.slice(0,3).map(e=>`${e.kind} (${e.t.toFixed(2)} s)`).join('、')||'无'}`:''):`<strong class="miss">未穿越开口平面</strong><br>轨迹距目标中心最近约 ${(closest.d*100).toFixed(1)} cm`;
+  let d=T();result.innerHTML=collision?`<strong class="miss">${d.collided(kindLabel(collision.kind))}</strong><br>${d.collisionTime}${collision.t.toFixed(3)} s<br>${d.collisionAt}X=${collision.x.toFixed(3)}, Y=${collision.y.toFixed(3)}, Z=${collision.z.toFixed(3)} m`:hit?(hit.inside?`<strong class="${insideResult?.retained?'hit':'miss'}">${insideResult?.retained?d.retained:d.notRetained}</strong>`:`<strong class="miss">${d.notEntered}</strong>`)+`<br>${d.crossing}t=${hit.t.toFixed(3)} s<br>${d.crossPoint}X=${hit.x.toFixed(3)}, Y=${hit.y.toFixed(3)}, Z=${hit.z.toFixed(3)} m<br>${d.offset}ΔX=${((hit.x-t.x)*100).toFixed(1)} cm, ΔY=${((hit.y-t.y)*100).toFixed(1)} cm`+(insideResult?`<br>${insideResult.escaped?d.escaped:insideResult.retained?d.settled:d.unsettled}${d.contacts(insideResult.events.length,insideResult.events.slice(0,3).map(e=>`${kindLabel(e.kind)} (${e.t.toFixed(2)} s)`).join(d.listSep))}`:''):`<strong class="miss">${d.noCross}</strong><br>${d.closest((closest.d*100).toFixed(1))}`;
   updateBalance();draw();
 }
-function updateBalance(){let threshold=num('threshold');balance.innerHTML=['red','blue'].map(name=>{let h=hives[name],torque=h.addedMass*G*lever;return `<strong style="color:${name==='red'?'#fb8589':'#8abaff'}">${name==='red'?'红':'蓝'} HIVE</strong>：朝上 ${h.up>0?'+Y':'−Y'}，${h.nectar} NECTAR + ${h.pollen} POLLEN，翻转 ${h.tips} 次<br>附加力矩 ${torque.toFixed(2)} / ${threshold.toFixed(2)} N·m${h.moving?' · 正在下坠':''}`}).join('<br><br>')}
+function updateBalance(){let threshold=num('threshold'),d=T();balance.innerHTML=['red','blue'].map(name=>{let h=hives[name],torque=h.addedMass*G*lever;return `<strong style="color:${name==='red'?'#fb8589':'#8abaff'}">${d.hive(name)}</strong>${d.balance(h.up>0?'+Y':'−Y',h.nectar,h.pollen,h.tips)}<br>${d.torque}${torque.toFixed(2)} / ${threshold.toFixed(2)} N·m${h.moving?d.falling:''}`}).join('<br><br>')}
 function recordShot(name,type){let h=hives[name];h[type]++;h.addedMass+=ballMass[type];if(insideResult?.final){h.balls.push({type,...insideResult.final});settleStoredBalls(h)}if(h.addedMass*G*lever>=num('threshold'))h.moving=true;updateBalance()}
 function stepHive(h,dt){if(!h.moving)return false;let torque=h.addedMass*G*lever,I=.16,damping=.43,spring=.17;
  let accel=(torque+spring*(Math.PI-h.angle)-damping*h.omega)/I;h.omega+=accel*dt;h.angle+=h.omega*dt;
@@ -206,7 +234,7 @@ function openingMargin(p,m){let u=p.x-m.x,v=dot(sub(p,m),m.tangent),margin=Infin
 function solve(){syncTeam();let originalA=el.angle.value,originalY=el.yaw.value,t=target(),goal=currentCellGeometry(el.team.value,sign()),best=null;
  for(let [u,v] of [[0,0],[-.08,0],[.08,0],[0,-.06],[0,.06]]){let tx=t.x+u,ty=t.y+v*goal.tangent.y,yaw=Math.atan2(ty-num('y'),tx-num('x'))*180/Math.PI;el.yaw.value=yaw.toFixed(2);
   for(let a=10;a<=85;a+=.5){el.angle.value=a.toFixed(2);let r=integrate();if(!r.wall&&r.cross&&r.cross.inside&&r.inside?.retained){let margin=openingMargin(r.cross,goal);if(!best||margin>best.margin)best={a,yaw,margin}}}}
- if(best){el.angle.value=best.a.toFixed(2);el.yaw.value=best.yaw.toFixed(2);compute()}else{el.angle.value=originalA;el.yaw.value=originalY;compute();result.innerHTML+='<br><span class="miss">当前初速下没有找到可进入开口的角度；试着提高初速或调整发射点。</span>'}return best}
+ if(best){el.angle.value=best.a.toFixed(2);el.yaw.value=best.yaw.toFixed(2);compute()}else{el.angle.value=originalA;el.yaw.value=originalY;compute();result.innerHTML+=`<br><span class="miss">${T().noSolution}</span>`}return best}
 ids.filter(id=>id!=='team'&&id!=='state').forEach(id=>el[id].addEventListener('input',compute));document.getElementById('aim').onclick=solve;document.getElementById('reset').onclick=()=>{azimuth=-.74;cameraDistance=3.4;sideZoom=1;draw()};document.getElementById('resetHive').onclick=()=>{if(playing)return;hives={red:newHive('red'),blue:newHive('blue')};Object.values(hives).forEach(settleStoredBalls);compute()};
 document.getElementById('play').onclick=()=>{if(playing||hives[el.team.value].moving)return;compute();playing=true;anim=0;let team=el.team.value,type=ballType(),success=Boolean(insideResult?.retained&&!collision),last=performance.now();document.getElementById('play').disabled=true;
  function tick(now){let dt=Math.min((now-last)/1000,.04);last=now;anim+=dt;let flightEnd=samples[samples.length-1].t;let lo=0,hi=samples.length-1;while(lo<hi){let mid=(lo+hi+1)>>1;if(samples[mid].t<=anim)lo=mid;else hi=mid-1}let p=samples[lo];
@@ -232,5 +260,6 @@ window.HiveControl={
 let dragX=null;scene.addEventListener('pointerdown',e=>{dragX=e.clientX;scene.setPointerCapture(e.pointerId)});scene.addEventListener('pointermove',e=>{if(dragX===null)return;azimuth+=(e.clientX-dragX)*.007;dragX=e.clientX;draw()});scene.addEventListener('pointerup',()=>dragX=null);
 scene.addEventListener('wheel',e=>{e.preventDefault();cameraDistance=Math.max(1.15,Math.min(9,cameraDistance*Math.exp(e.deltaY*.001)));draw()},{passive:false});
 side.addEventListener('wheel',e=>{e.preventDefault();sideZoom=Math.max(.5,Math.min(4,sideZoom*Math.exp(-e.deltaY*.001)));draw()},{passive:false});
-window.addEventListener('resize',draw);if(!window.HIVE_CAD_MESH)Object.values(hives).forEach(settleStoredBalls);buildCadColliders();initCAD();compute();
+window.addEventListener('resize',draw);
+const langButton=document.getElementById('lang');if(langButton)langButton.onclick=()=>{lang=lang==='zh'?'en':'zh';try{localStorage.setItem('biobuzz-lang',lang)}catch(e){}applyLanguage();compute()};applyLanguage();if(!window.HIVE_CAD_MESH)Object.values(hives).forEach(settleStoredBalls);buildCadColliders();initCAD();compute();
 </script></body></html>
