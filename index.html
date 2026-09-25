@@ -44,7 +44,8 @@ const fixedElevation=.39, ballMass={pollen:.055*.45359237,nectar:.091*.45359237}
 const AIR_DENSITY=1.2,CONTACT_STIFFNESS=4200,CONTACT_DAMPING=7,CONTACT_FRICTION=.35;
 const ballType=()=>el.diameter.value==='0.071'?'pollen':'nectar';
 const newHive=name=>({up:name==='red'?1:-1,addedMass:0,pollen:0,nectar:3,tips:0,angle:0,omega:0,moving:false,
- balls:[-.105,0,.105].map(u=>({type:'nectar',u,v:.09,depth:.12,vu:0,vv:0,vd:0}))});
+ // Manual §10.3.1: staged against the back wall, in a line against the side nearest that ALLIANCE AREA (red −X, blue +X).
+ balls:[.2,.107,.014].map(u=>({type:'nectar',u:(name==='red'?-1:1)*u,v:.09,depth:.12,vu:0,vv:0,vd:0}))});
 let hives={red:newHive('red'),blue:newHive('blue')},azimuth=-.74,samples=[],hit=null,collision=null,insideResult=null,anim=0,playing=false;
 const num=id=>Number(el[id].value), sign=()=>num('state'), targetX=()=>el.team.value==='red'?-hiveOffset:hiveOffset;
 function syncTeam(){el.team.value=num('x')<=0?'red':'blue';el.state.value=String(hives[el.team.value].up)}
@@ -55,10 +56,12 @@ function cellGeometry(x,s,up,blend=1){let y=s*cellOffset,vertical=(up?1:-1)*blen
  let aperture=outline.map(([u,v])=>({x:x+u,y:y-s*v*Math.cos(pitch),z:z+vertical*v*Math.sin(pitch)}));
  let length=Math.hypot(Math.sin(pitch),vertical*Math.cos(pitch)),normal={x:0,y:s*Math.sin(pitch)/length,z:vertical*Math.cos(pitch)/length};
  let back=aperture.map(p=>({x:p.x,y:p.y-normal.y*D,z:p.z-normal.z*D}));return {aperture,back,normal,tangent:{x:0,y:-s*Math.cos(pitch),z:vertical*Math.sin(pitch)},x,y,z,s,up}}
-function currentCellGeometry(name,s){let x=name==='red'?-hiveOffset:hiveOffset,h=hives[name],base=cellGeometry(x,s,s===(name==='red'?1:-1)),phi=(name==='red'?1:-1)*(h.tips%2)*Math.PI/3,co=Math.cos(phi),si=Math.sin(phi);
-  const rotate=p=>{let v=p.z-pivotZ;return {x:p.x,y:p.y*co+v*si,z:pivotZ+v*co-p.y*si}};
-  let center=rotate(base),normal=rotate({x:0,y:base.normal.y,z:pivotZ+base.normal.z}),tangent=rotate({x:0,y:base.tangent.y,z:pivotZ+base.tangent.z});
-  return {...base,y:center.y,z:center.z,normal:{x:0,y:normal.y,z:normal.z-pivotZ},tangent:{x:0,y:tangent.y,z:tangent.z-pivotZ},aperture:base.aperture.map(rotate),back:base.back.map(rotate)}}
+function rotateCell(g,phi){let co=Math.cos(phi),si=Math.sin(phi);
+  const rotate=p=>{let v=p.z-pivotZ;return {x:p.x,y:p.y*co+v*si,z:pivotZ+v*co-p.y*si}},direction=d=>({x:d.x,y:d.y*co+d.z*si,z:d.z*co-d.y*si});
+  let center=rotate(g);return {...g,y:center.y,z:center.z,normal:direction(g.normal),tangent:direction(g.tangent),aperture:g.aperture.map(rotate),back:g.back.map(rotate)}}
+// The HIVE is mirror-symmetric about its pivot plane (official CAD), so the downward CELL is the upward pose of the same side rotated 60° down.
+function restCellGeometry(x,s,up){let g=cellGeometry(x,s,true);return up?g:{...rotateCell(g,s*Math.PI/3),up:false}}
+function currentCellGeometry(name,s){return restCellGeometry(name==='red'?-hiveOffset:hiveOffset,s,s===hives[name].up)}
 const dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z, sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z});
 function segmentDistance2(p,a,b){let v=sub(b,a),u=sub(p,a),q=Math.max(0,Math.min(1,dot(u,v)/dot(v,v)));return (p.x-a.x-v.x*q)**2+(p.y-a.y-v.y*q)**2+(p.z-a.z-v.z*q)**2}
 function triangleDistance2(p,a,b,c){let ab=sub(b,a),ac=sub(c,a),ap=sub(p,a),d1=dot(ab,ap),d2=dot(ac,ap);if(d1<=0&&d2<=0)return dot(ap,ap);
@@ -82,7 +85,7 @@ function buildTree(tris){let box=[Infinity,Infinity,Infinity,-Infinity,-Infinity
 function buildCadColliders(){if(!window.HIVE_CAD_MESH)return;cadColliders={};for(let name of ['red','blue']){cadColliders[name]={};for(let side of ['plus','minus']){let triangles=[];for(let part of ['shell','back']){let raw=window.HIVE_CAD_MESH[name][side][part];for(let i=0;i<raw.length;i+=9){let a={x:raw[i],y:raw[i+1],z:raw[i+2]},b={x:raw[i+3],y:raw[i+4],z:raw[i+5]},c={x:raw[i+6],y:raw[i+7],z:raw[i+8]};let box=[Math.min(a.x,b.x,c.x),Math.min(a.y,b.y,c.y),Math.min(a.z,b.z,c.z),Math.max(a.x,b.x,c.x),Math.max(a.y,b.y,c.y),Math.max(a.z,b.z,c.z)];triangles.push({a,b,c,box,center:[(a.x+b.x+c.x)/3,(a.y+b.y+c.y)/3,(a.z+b.z+c.z)/3],kind:part==='back'?'封闭背板':'侧面'})}}cadColliders[name][side]=buildTree(triangles)}}Object.values(hives).forEach(settleStoredBalls)}
 function treeHit(p,r2,node){let r=Math.sqrt(r2),b=node.box;if(p.x<b[0]-r||p.x>b[3]+r||p.y<b[1]-r||p.y>b[4]+r||p.z<b[2]-r||p.z>b[5]+r)return null;if(node.tris){for(let t of node.tris)if(triangleDistance2(p,t.a,t.b,t.c)<=r2)return t.kind;return null}return treeHit(p,r2,node.left)||treeHit(p,r2,node.right)}
 function cadSkinCollision(p,radius){if(!cadColliders||Math.abs(p.x)>.8||Math.abs(p.y)>1||p.z<.6||p.z>1.9)return null;for(let name of ['red','blue']){let h=hives[name],phi=(name==='red'?1:-1)*(h.tips%2)*Math.PI/3,co=Math.cos(phi),si=Math.sin(phi),v=p.z-pivotZ,local={x:p.x,y:-v*si+p.y*co,z:pivotZ+v*co+p.y*si};for(let side of ['plus','minus']){let kind=treeHit(local,radius*radius,cadColliders[name][side]);if(kind)return {p,kind}}}return null}
-function cadSurfaceContacts(p,radius,name,s){if(!cadColliders)return [];let phi=(name==='red'?1:-1)*(hives[name].tips%2)*Math.PI/3,co=Math.cos(phi),si=Math.sin(phi),v=p.z-pivotZ,local={x:p.x,y:p.y*co-v*si,z:pivotZ+p.y*si+v*co},base=cellGeometry(name==='red'?-hiveOffset:hiveOffset,s,s===(name==='red'?1:-1)),reference={x:base.x,y:base.y-base.normal.y*D*.5,z:base.z-base.normal.z*D*.5},hits=[];
+function cadSurfaceContacts(p,radius,name,s){if(!cadColliders)return [];let phi=(name==='red'?1:-1)*(hives[name].tips%2)*Math.PI/3,co=Math.cos(phi),si=Math.sin(phi),v=p.z-pivotZ,local={x:p.x,y:p.y*co-v*si,z:pivotZ+p.y*si+v*co},base=restCellGeometry(name==='red'?-hiveOffset:hiveOffset,s,s===(name==='red'?1:-1)),reference={x:base.x,y:base.y-base.normal.y*D*.5,z:base.z-base.normal.z*D*.5},hits=[];
  const visit=node=>{let b=node.box;if(local.x<b[0]-radius||local.x>b[3]+radius||local.y<b[1]-radius||local.y>b[4]+radius||local.z<b[2]-radius||local.z>b[5]+radius)return;
    if(node.tris){for(let t of node.tris){let q=closestTriangle(local,t.a,t.b,t.c),delta=sub(local,q),dist=Math.hypot(delta.x,delta.y,delta.z);if(dist>=radius)continue;let toward=sub(reference,q),n=dist>1e-7?{x:delta.x/dist,y:delta.y/dist,z:delta.z/dist}:toward;if(dot(n,toward)<0)n={x:-n.x,y:-n.y,z:-n.z};let size=Math.hypot(n.x,n.y,n.z);if(size<1e-8)continue;n={x:n.x/size,y:n.y/size,z:n.z/size};hits.push({dist,kind:t.kind,n,point:q})}return}visit(node.left);visit(node.right)};
  visit(cadColliders[name][s>0?'plus':'minus']);hits.sort((a,b)=>a.dist-b.dist);let chosen=[];for(let h of hits){if(chosen.some(c=>dot(c.localNormal,h.n)>.9))continue;let n={x:h.n.x,y:h.n.y*co+h.n.z*si,z:-h.n.y*si+h.n.z*co},q={x:h.point.x,y:h.point.y*co+(h.point.z-pivotZ)*si,z:pivotZ-h.point.y*si+(h.point.z-pivotZ)*co};chosen.push({kind:h.kind,penetration:radius-h.dist,normal:n,localNormal:h.n,point:q});if(chosen.length===3)break}return chosen}

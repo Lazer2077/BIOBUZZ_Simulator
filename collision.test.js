@@ -81,4 +81,9 @@ assert.equal(cadSolution.status,'hit','solver must find a path using CAD skin co
 assert.ok(cadSolution.internalCollisions.every(c=>Number.isFinite(c.x)&&Number.isFinite(c.y)&&Number.isFinite(c.z)),'all contact points must be finite world coordinates');
 const cadAfterTip=api.solve({x:0.6,y:1.8,z:0.55,speed:6.5,ballType:'pollen'});
 assert.equal(cadAfterTip.status,'hit','CAD collision must follow the HIVE after tipping');
+const cellOffsets=vm.runInContext(`['red','blue'].flatMap(name=>[1,-1].map(s=>{let a=window.HIVE_CAD_MESH[name][s>0?'plus':'minus'].rib,phi=(name==='red'?1:-1)*(hives[name].tips%2)*Math.PI/3,cy=0,cv=0,n=a.length/3;
+  for(let i=0;i<a.length;i+=3){let y=a[i+1],v=a[i+2]-pivotZ;cy+=y*Math.cos(phi)+v*Math.sin(phi);cv+=v*Math.cos(phi)-y*Math.sin(phi)}
+  let g=currentCellGeometry(name,s),p=g.aperture.concat(g.back);return Math.hypot(cy/n-p.reduce((q,c)=>q+c.y,0)/p.length,cv/n+pivotZ-p.reduce((q,c)=>q+c.z,0)/p.length)}))`,sandbox);
+assert.equal(sandbox.sim.hives.blue.tips%2,1,'the geometry check must cover a tipped HIVE');
+assert.ok(cellOffsets.every(d=>d<.03),'every proxy CELL, upward or downward, tipped or not, must coincide with the CAD CELL: '+cellOffsets.map(d=>d.toFixed(3)).join(', '));
 console.log('HIVE collision checks passed');
