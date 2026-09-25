@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BIOBUZZ HIVE 射击模拟器</title>
+<style>
+:root{font-family:system-ui,"Microsoft YaHei",sans-serif;color:#eaf0f8;background:#0d1420}*{box-sizing:border-box}body{margin:0}header{padding:18px 24px;background:#172335;border-bottom:1px solid #304158}h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#9fb2c8;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;min-height:calc(100vh - 83px)}main{padding:16px;min-width:0}.panel{background:#142033;border:1px solid #31445b;border-radius:12px;padding:14px}.views{display:grid;grid-template-columns:2fr 1fr;gap:12px}canvas{width:100%;height:530px;display:block;background:#101b2a;border-radius:8px;cursor:grab}canvas:active{cursor:grabbing}aside{padding:16px;background:#111d2d;border-left:1px solid #304158;overflow:auto}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:20px 0 9px;color:#b4c9df}.field{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:8px;margin:9px 0}.field label{font-size:13px;color:#c4d2e1}.field input,.field select{width:100%;background:#1e3046;color:#fff;border:1px solid #49627c;border-radius:6px;padding:6px}.field input:focus,.field select:focus{outline:2px solid #48b5f5}button{background:#286aa3;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;margin:4px 4px 4px 0}button:hover{background:#3487cd}.result{margin-top:14px;padding:12px;border-radius:8px;background:#1c3044;line-height:1.55;font-size:13px}.hit{color:#61e5a0}.miss{color:#ffbd77}.legend{font-size:12px;color:#9fb2c8;line-height:1.6;margin-top:12px}.note{font-size:12px;color:#aebfd0;line-height:1.5;margin-top:12px}a{color:#8cccff}@media(max-width:950px){.layout{display:block}.views{grid-template-columns:1fr}canvas{height:380px}aside{border-left:0}}
+</style>
+</head>
+<body>
+<header><h1>FTC BIOBUZZ · HIVE 射击模拟器</h1><p>SI 单位计算；左右拖动三维视图绕 Z 轴旋转，滚轮放大或缩小视图。轨迹和开口尺寸用于高射控制算法初步验证。</p></header>
+<div class="layout"><main><div class="views"><section class="panel"><h2>三维场景</h2><canvas id="scene"></canvas></section><section class="panel"><h2>侧视图 / 轨迹</h2><canvas id="side"></canvas></section></div><p class="legend">蓝色 / 红色：两组 HIVE；黄色：所选开口；青色：球轨迹；白色：发射点。坐标：X 沿红蓝 HIVE 排列方向，Y 沿每组两个 CELL 排列方向，Z 向上。中心转轴位于 X=0、Y=0。</p></main>
+<aside><h2>发射与目标</h2>
+<div class="field"><label for="team">最近的 HIVE</label><select id="team" disabled><option value="red">红色</option><option value="blue">蓝色</option></select></div>
+<div class="field"><label for="state">朝上的 CELL</label><select id="state" disabled><option value="1">+Y 侧</option><option value="-1">−Y 侧</option></select></div>
+<div class="field"><label for="x">发射点 X (m)</label><input id="x" type="number" step="0.01" value="-0.6"></div>
+<div class="field"><label for="y">发射点 Y (m)</label><input id="y" type="number" step="0.01" value="1.8"></div>
+<div class="field"><label for="z">发射高度 Z (m)</label><input id="z" type="number" min="0.05" step="0.01" value="0.55"></div>
+<div class="field"><label for="speed">初速 (m/s)</label><input id="speed" type="number" min="0.1" step="0.1" value="6.5"></div>
+<div class="field"><label for="angle">仰角 (°)</label><input id="angle" type="number" min="-10" max="89" step="0.1" value="52"></div>
+<div class="field"><label for="yaw">水平角 (°)</label><input id="yaw" type="number" min="-180" max="180" step="0.1" value="90"></div>
+<div class="field"><label for="diameter">球直径</label><select id="diameter"><option value="0.071">POLLEN 71 mm</option><option value="0.091">NECTAR 91 mm</option></select></div>
+<div class="field"><label for="drag">阻力系数 Cᴅ (估算 0.3–1.0)</label><input id="drag" type="number" min="0" max="1.5" step="0.05" value="0.5"></div>
+<div class="field"><label for="threshold">翻转附加力矩 (N·m)</label><input id="threshold" type="number" min="0.01" step="0.01" value="0.30"></div>
+<button id="aim">自动求解角度</button><button id="play">发射一球</button><button id="reset">重置视角</button><button id="resetHive">重置 HIVE</button>
+<div class="result" id="result"></div>
+<div class="result" id="balance"></div>
+<div class="note">飞行采用平方阻力，Cᴅ=0.3–1.0 是同类穿孔球的探索范围，不是 NECTAR 实测值。CELL 内外的侧板和背板按 CAD 网格计算；边缘用与 CAD 对齐的五边形约束，弹簧阻尼接触追踪至弹出、静止或 3 秒上限。橙点标出接触位置。碰撞次数仅供观察，不决定留球。初始三颗球先经重力和球间接触沉降。球体弹性与最终留球率须实测标定。</div>
+<div class="note">资料：<a href="https://ftc-resources.firstinspires.org/ftc/game/manual" target="_blank">竞赛手册 §9.6、§10.3、§10.5</a> · <a href="https://ftc-resources.firstinspires.org/ftc/field/initialfieldguide" target="_blank">CELL 装配指南</a> · <a href="https://andymark.com/products/biobuzz-scoring-elements" target="_blank">球重量</a> · <a href="https://www.youtube.com/watch?v=sUH3z5a5S9I&t=200s" target="_blank">官方动画</a></div>
+</aside></div>
+<script src="vendor/three.min.js"></script>
+<script src="cad/hive-mesh.js"></script>
+<script>
+// All geometry and flight calculations use metres and seconds.
+const IN=.0254,G=9.80665, W=20*IN,H=14*IN,D=12*IN;
+const pivotZ=43.95*IN, frameW=49.46*IN, frameD=38.95*IN;
+const hiveOffset=25.5*IN/2, cellOffset=.4075;
+const lowOpening=53.5*IN, highOpening=65.6*IN;
+const openingZ=1.5003, pitch=Math.PI/3, shoulder=-H/2+7.61*IN;
+const ids=['team','state','x','y','z','speed','angle','yaw','diameter','drag','threshold'];
+const el=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
+const scene=document.getElementById('scene'),side=document.getElementById('side'),result=document.getElementById('result'),balance=document.getElementById('balance');
+const fixedElevation=.39, ballMass={pollen:.055*.45359237,nectar:.091*.45359237},lever=.392;
+const AIR_DENSITY=1.2,CONTACT_STIFFNESS=4200,CONTACT_DAMPING=7,CONTACT_FRICTION=.35;
+const ballType=()=>el.diameter.value==='0.071'?'pollen':'nectar';
+const newHive=name=>({up:name==='red'?1:-1,addedMass:0,pollen:0,nectar:3,tips:0,angle:0,omega:0,moving:false,
+ balls:[-.105,0,.105].map(u=>({type:'nectar',u,v:.09,depth:.12,vu:0,vv:0,vd:0}))});
+let hives={red:newHive('red'),blue:newHive('blue')},azimuth=-.74,samples=[],hit=null,collision=null,insideResult=null,anim=0,playing=false;
+const num=id=>Number(el[id].value), sign=()=>num('state'), targetX=()=>el.team.value==='red'?-hiveOffset:hiveOffset;
+function syncTeam(){el.team.value=num('x')<=0?'red':'blue';el.state.value=String(hives[el.team.value].up)}
+function target(){let mean=outline.reduce((sum,p)=>sum+p[1],0)/outline.length,g=currentCellGeometry(el.team.value,sign());return {x:g.x,y:g.y+mean*g.tangent.y,z:g.z+mean*g.tangent.z}}
+function initial(){let a=num('angle')*Math.PI/180,b=num('yaw')*Math.PI/180,v=num('speed');return {x:num('x'),y:num('y'),z:num('z'),vx:v*Math.cos(a)*Math.cos(b),vy:v*Math.cos(a)*Math.sin(b),vz:v*Math.sin(a)}}
+const outline=[[-W/2,-H/2],[W/2,-H/2],[W/2,shoulder],[0,H/2],[-W/2,shoulder]];
+function cellGeometry(x,s,up,blend=1){let y=s*cellOffset,vertical=(up?1:-1)*blend,z=pivotZ+(openingZ-pivotZ)*vertical;
+ let aperture=outline.map(([u,v])=>({x:x+u,y:y-s*v*Math.cos(pitch),z:z+vertical*v*Math.sin(pitch)}));
+ let length=Math.hypot(Math.sin(pitch),vertical*Math.cos(pitch)),normal={x:0,y:s*Math.sin(pitch)/length,z:vertical*Math.cos(pitch)/length};
+ let back=aperture.map(p=>({x:p.x,y:p.y-normal.y*D,z:p.z-normal.z*D}));return {aperture,back,normal,tangent:{x:0,y:-s*Math.cos(pitch),z:vertical*Math.sin(pitch)},x,y,z,s,up}}
+function currentCellGeometry(name,s){let x=name==='red'?-hiveOffset:hiveOffset,h=hives[name],base=cellGeometry(x,s,s===(name==='red'?1:-1)),phi=(name==='red'?1:-1)*(h.tips%2)*Math.PI/3,co=Math.cos(phi),si=Math.sin(phi);
+  const rotate=p=>{let v=p.z-pivotZ;return {x:p.x,y:p.y*co+v*si,z:pivotZ+v*co-p.y*si}};
+  let center=rotate(base),normal=rotate({x:0,y:base.normal.y,z:pivotZ+base.normal.z}),tangent=rotate({x:0,y:base.tangent.y,z:pivotZ+base.tangent.z});
+  return {...base,y:center.y,z:center.z,normal:{x:0,y:normal.y,z:normal.z-pivotZ},tangent:{x:0,y:tangent.y,z:tangent.z-pivotZ},aperture:base.aperture.map(rotate),back:base.back.map(rotate)}}
+const dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z, sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z});
+function segmentDistance2(p,a,b){let v=sub(b,a),u=sub(p,a),q=Math.max(0,Math.min(1,dot(u,v)/dot(v,v)));return (p.x-a.x-v.x*q)**2+(p.y-a.y-v.y*q)**2+(p.z-a.z-v.z*q)**2}
+function triangleDistance2(p,a,b,c){let ab=sub(b,a),ac=sub(c,a),ap=sub(p,a),d1=dot(ab,ap),d2=dot(ac,ap);if(d1<=0&&d2<=0)return dot(ap,ap);
+ let bp=sub(p,b),d3=dot(ab,bp),d4=dot(ac,bp);if(d3>=0&&d4<=d3)return dot(bp,bp);
+ let vc=d1*d4-d3*d2;if(vc<=0&&d1>=0&&d3<=0)return segmentDistance2(p,a,b);
+ let cp=sub(p,c),d5=dot(ab,cp),d6=dot(ac,cp);if(d6>=0&&d5<=d6)return dot(cp,cp);
+ let vb=d5*d2-d1*d6;if(vb<=0&&d2>=0&&d6<=0)return segmentDistance2(p,a,c);
+ let va=d3*d6-d5*d4;if(va<=0&&d4-d3>=0&&d5-d6>=0)return segmentDistance2(p,b,c);
+ let n={x:ab.y*ac.z-ab.z*ac.y,y:ab.z*ac.x-ab.x*ac.z,z:ab.x*ac.y-ab.y*ac.x},h=dot(ap,n);return h*h/dot(n,n)}
+function closestTriangle(p,a,b,c){let ab=sub(b,a),ac=sub(c,a),ap=sub(p,a),d1=dot(ab,ap),d2=dot(ac,ap);if(d1<=0&&d2<=0)return a;
+ let bp=sub(p,b),d3=dot(ab,bp),d4=dot(ac,bp);if(d3>=0&&d4<=d3)return b;
+ let vc=d1*d4-d3*d2;if(vc<=0&&d1>=0&&d3<=0){let q=d1/(d1-d3);return {x:a.x+q*ab.x,y:a.y+q*ab.y,z:a.z+q*ab.z}}
+ let cp=sub(p,c),d5=dot(ab,cp),d6=dot(ac,cp);if(d6>=0&&d5<=d6)return c;
+ let vb=d5*d2-d1*d6;if(vb<=0&&d2>=0&&d6<=0){let q=d2/(d2-d6);return {x:a.x+q*ac.x,y:a.y+q*ac.y,z:a.z+q*ac.z}}
+ let va=d3*d6-d5*d4;if(va<=0&&d4-d3>=0&&d5-d6>=0){let bc=sub(c,b),q=(d4-d3)/((d4-d3)+(d5-d6));return {x:b.x+q*bc.x,y:b.y+q*bc.y,z:b.z+q*bc.z}}
+ let sum=va+vb+vc;if(Math.abs(sum)<1e-14)return a;let q=vb/sum,r=vc/sum;return {x:a.x+q*ab.x+r*ac.x,y:a.y+q*ab.y+r*ac.y,z:a.z+q*ab.z+r*ac.z}}
+function quadDistance2(p,q){return Math.min(triangleDistance2(p,q[0],q[1],q[2]),triangleDistance2(p,q[0],q[2],q[3]))}
+function polygonDistance2(p,q){let d=Infinity;for(let j=1;j<q.length-1;j++)d=Math.min(d,triangleDistance2(p,q[0],q[j],q[j+1]));return d}
+let cadColliders=null;
+function buildTree(tris){let box=[Infinity,Infinity,Infinity,-Infinity,-Infinity,-Infinity];for(let t of tris){for(let j=0;j<3;j++){box[j]=Math.min(box[j],t.box[j]);box[j+3]=Math.max(box[j+3],t.box[j+3])}}if(tris.length<=16)return {box,tris};let spans=[box[3]-box[0],box[4]-box[1],box[5]-box[2]],axis=spans.indexOf(Math.max(...spans));tris.sort((a,b)=>a.center[axis]-b.center[axis]);let mid=tris.length>>1;return {box,left:buildTree(tris.slice(0,mid)),right:buildTree(tris.slice(mid))}}
+function buildCadColliders(){if(!window.HIVE_CAD_MESH)return;cadColliders={};for(let name of ['red','blue']){cadColliders[name]={};for(let side of ['plus','minus']){let triangles=[];for(let part of ['shell','back']){let raw=window.HIVE_CAD_MESH[name][side][part];for(let i=0;i<raw.length;i+=9){let a={x:raw[i],y:raw[i+1],z:raw[i+2]},b={x:raw[i+3],y:raw[i+4],z:raw[i+5]},c={x:raw[i+6],y:raw[i+7],z:raw[i+8]};let box=[Math.min(a.x,b.x,c.x),Math.min(a.y,b.y,c.y),Math.min(a.z,b.z,c.z),Math.max(a.x,b.x,c.x),Math.max(a.y,b.y,c.y),Math.max(a.z,b.z,c.z)];triangles.push({a,b,c,box,center:[(a.x+b.x+c.x)/3,(a.y+b.y+c.y)/3,(a.z+b.z+c.z)/3],kind:part==='back'?'封闭背板':'侧面'})}}cadColliders[name][side]=buildTree(triangles)}}Object.values(hives).forEach(settleStoredBalls)}
+function treeHit(p,r2,node){let r=Math.sqrt(r2),b=node.box;if(p.x<b[0]-r||p.x>b[3]+r||p.y<b[1]-r||p.y>b[4]+r||p.z<b[2]-r||p.z>b[5]+r)return null;if(node.tris){for(let t of node.tris)if(triangleDistance2(p,t.a,t.b,t.c)<=r2)return t.kind;return null}return treeHit(p,r2,node.left)||treeHit(p,r2,node.right)}
+function cadSkinCollision(p,radius){if(!cadColliders||Math.abs(p.x)>.8||Math.abs(p.y)>1||p.z<.6||p.z>1.9)return null;for(let name of ['red','blue']){let h=hives[name],phi=(name==='red'?1:-1)*(h.tips%2)*Math.PI/3,co=Math.cos(phi),si=Math.sin(phi),v=p.z-pivotZ,local={x:p.x,y:-v*si+p.y*co,z:pivotZ+v*co+p.y*si};for(let side of ['plus','minus']){let kind=treeHit(local,radius*radius,cadColliders[name][side]);if(kind)return {p,kind}}}return null}
+function cadSurfaceContacts(p,radius,name,s){if(!cadColliders)return [];let phi=(name==='red'?1:-1)*(hives[name].tips%2)*Math.PI/3,co=Math.cos(phi),si=Math.sin(phi),v=p.z-pivotZ,local={x:p.x,y:p.y*co-v*si,z:pivotZ+p.y*si+v*co},base=cellGeometry(name==='red'?-hiveOffset:hiveOffset,s,s===(name==='red'?1:-1)),reference={x:base.x,y:base.y-base.normal.y*D*.5,z:base.z-base.normal.z*D*.5},hits=[];
+ const visit=node=>{let b=node.box;if(local.x<b[0]-radius||local.x>b[3]+radius||local.y<b[1]-radius||local.y>b[4]+radius||local.z<b[2]-radius||local.z>b[5]+radius)return;
+   if(node.tris){for(let t of node.tris){let q=closestTriangle(local,t.a,t.b,t.c),delta=sub(local,q),dist=Math.hypot(delta.x,delta.y,delta.z);if(dist>=radius)continue;let toward=sub(reference,q),n=dist>1e-7?{x:delta.x/dist,y:delta.y/dist,z:delta.z/dist}:toward;if(dot(n,toward)<0)n={x:-n.x,y:-n.y,z:-n.z};let size=Math.hypot(n.x,n.y,n.z);if(size<1e-8)continue;n={x:n.x/size,y:n.y/size,z:n.z/size};hits.push({dist,kind:t.kind,n,point:q})}return}visit(node.left);visit(node.right)};
+ visit(cadColliders[name][s>0?'plus':'minus']);hits.sort((a,b)=>a.dist-b.dist);let chosen=[];for(let h of hits){if(chosen.some(c=>dot(c.localNormal,h.n)>.9))continue;let n={x:h.n.x,y:h.n.y*co+h.n.z*si,z:-h.n.y*si+h.n.z*co},q={x:h.point.x,y:h.point.y*co+(h.point.z-pivotZ)*si,z:pivotZ-h.point.y*si+(h.point.z-pivotZ)*co};chosen.push({kind:h.kind,penetration:radius-h.dist,normal:n,localNormal:h.n,point:q});if(chosen.length===3)break}return chosen}
+function insideOpening(p,m,radius){let u=p.x-m.x,v=dot(sub(p,m),m.tangent);
+ for(let i=0;i<outline.length;i++){let [ax,ay]=outline[i],[bx,by]=outline[(i+1)%outline.length],ex=bx-ax,ey=by-ay,cross=ex*(v-ay)-ey*(u-ax);if(cross<radius*Math.hypot(ex,ey))return false}return true}
+function cellCollision(p,meshes,radius){let r2=radius*radius;if(cadColliders){let exact=cadSkinCollision(p,radius);if(exact)return exact}for(let m of meshes){if(Math.abs(p.x-m.x)>W/2+D+radius||Math.abs(p.y-m.y)>H+D+radius||Math.abs(p.z-m.z)>D+H+radius)continue;
+  let a=m.aperture,b=m.back;if(!cadColliders&&polygonDistance2(p,b)<=r2)return {p,kind:'封闭背板'};
+  for(let j=0;j<a.length;j++){let k=(j+1)%a.length;if(!cadColliders&&quadDistance2(p,[a[j],a[k],b[k],b[j]])<=r2)return {p,kind:'侧面'};if(segmentDistance2(p,a[j],a[k])<=r2)return {p,kind:'开口边框'}}
+ }return null}
+function flightStep(p,dt){let speed=Math.hypot(p.vx,p.vy,p.vz),m=ballMass[ballType()],area=Math.PI*num('diameter')**2/4,beta=.5*AIR_DENSITY*num('drag')*area/m;
+  let ax=-beta*speed*p.vx,ay=-beta*speed*p.vy,az=-G-beta*speed*p.vz;
+  p.x+=p.vx*dt+.5*ax*dt*dt;p.y+=p.vy*dt+.5*ay*dt*dt;p.z+=p.vz*dt+.5*az*dt*dt;
+  let nextSpeed=Math.hypot(p.vx+ax*dt,p.vy+ay*dt,p.vz+az*dt);p.vx+=.5*(ax-beta*nextSpeed*(p.vx+ax*dt))*dt;p.vy+=.5*(ay-beta*nextSpeed*(p.vy+ay*dt))*dt;p.vz+=.5*(az-G-beta*nextSpeed*(p.vz+az*dt))*dt}
+function simulateInside(entry,goal){const radius=num('diameter')/2,mass=ballMass[ballType()],dt=.0005,tangent=goal.tangent;
+  let center={x:goal.x,y:goal.y,z:goal.z},rel=sub(entry,center),u=rel.x,v=dot(rel,tangent),depth=Math.max(0,-dot(rel,goal.normal));
+  let velocity={x:entry.vx,y:entry.vy,z:entry.vz},vu=entry.vx,vv=dot(velocity,tangent),vd=-dot(velocity,goal.normal),events=[],track=[],active=new Set(),elapsed=0,escaped=false;
+  const edgeNormals=outline.map(([ax,ay],i)=>{let [bx,by]=outline[(i+1)%outline.length],ex=bx-ax,ey=by-ay,len=Math.hypot(ex,ey);return {ax,ay,nx:-ey/len,ny:ex/len}});
+  const point=()=>({x:center.x+u,y:center.y+v*tangent.y-depth*goal.normal.y,z:center.z+v*tangent.z-depth*goal.normal.z,t:entry.t+elapsed});
+  track.push(point());
+  let settled=false;
+  for(let i=0;i<6000;i++){let fu=0,fv=-mass*G*tangent.z,fd=mass*G*goal.normal.z,touching=new Set();
+    const contact=(key,penetration,nx,ny,nz,contactPoint=null)=>{if(penetration<=0)return;let vn=vu*nx+vv*ny+vd*nz,force=Math.max(0,CONTACT_STIFFNESS*penetration-CONTACT_DAMPING*vn);fu+=force*nx;fv+=force*ny;fd+=force*nz;
+      let tx=vu-vn*nx,ty=vv-vn*ny,tz=vd-vn*nz,tmag=Math.hypot(tx,ty,tz);if(tmag>1e-5){let friction=Math.min(CONTACT_FRICTION*force,mass*tmag/dt);fu-=friction*tx/tmag;fv-=friction*ty/tmag;fd-=friction*tz/tmag}touching.add(key);
+      if(!active.has(key)){let position=contactPoint;if(!position){let centerPoint=point(),distance=radius-penetration;position={x:centerPoint.x-distance*nx,y:centerPoint.y-distance*(ny*tangent.y-nz*goal.normal.y),z:centerPoint.z-distance*(ny*tangent.z-nz*goal.normal.z)}}events.push({kind:key,t:entry.t+elapsed,...position})}};
+    let cadHits=cadColliders?cadSurfaceContacts(point(),radius,el.team.value,goal.s):[];
+    cadHits.forEach((c,j)=>contact(`${c.kind} ${j+1}`,c.penetration,c.normal.x,dot(c.normal,tangent),-dot(c.normal,goal.normal),c.point));
+    edgeNormals.forEach((edge,j)=>{if(cadHits.some(c=>edge.nx*c.normal.x+edge.ny*dot(c.normal,tangent)>.85))return;contact(`内壁 ${j+1}`,radius-((u-edge.ax)*edge.nx+(v-edge.ay)*edge.ny),edge.nx,edge.ny,0)});
+    if(!cadHits.some(c=>c.kind==='封闭背板'))contact('封闭背板',radius-(D-depth),0,0,-1);
+    active=touching;vu+=fu/mass*dt;vv+=fv/mass*dt;vd+=fd/mass*dt;u+=vu*dt;v+=vv*dt;depth+=vd*dt;elapsed+=dt;
+    if(i%10===9)track.push(point());
+    if(depth< -radius){escaped=true;break}
+    if(Math.abs(u)>W||Math.abs(v)>H||depth>D+.1)break;
+    let contained=edgeNormals.every(edge=>(u-edge.ax)*edge.nx+(v-edge.ay)*edge.ny>=radius-(cadColliders?.05:.012));
+    if(elapsed>.25&&contained&&depth>=radius-.01&&depth<=D-radius+.012&&Math.hypot(vu,vv,vd)<.08){settled=true;break}
+  }
+  track.push(point());let withinWalls=edgeNormals.every(edge=>(u-edge.ax)*edge.nx+(v-edge.ay)*edge.ny>=radius-(cadColliders?.05:.004));
+  return {retained:!escaped&&settled&&depth>=radius-.01&&depth<=D-radius+.012&&withinWalls,escaped,settled,events,track,elapsed,final:{u,v,depth,vu,vv,vd}};}
+function settleStoredBalls(h){let balls=h.balls;if(!balls.length)return;let dt=.001,edges=outline.map(([ax,ay],i)=>{let [bx,by]=outline[(i+1)%outline.length],ex=bx-ax,ey=by-ay,len=Math.hypot(ex,ey);return {ax,ay,nx:-ey/len,ny:ex/len}}),name=Object.entries(hives).find(([,item])=>item===h)?.[0],goal=currentCellGeometry(name,h.up);
+  for(let step=0;step<1800;step++){let forces=balls.map(b=>({u:0,v:-ballMass[b.type]*G*goal.tangent.z,d:ballMass[b.type]*G*goal.normal.z}));
+    for(let i=0;i<balls.length;i++){let b=balls[i],f=forces[i],r=b.type==='nectar'?.0455:.0355,m=ballMass[b.type];
+      const wall=(overlap,nx,ny,nd)=>{if(overlap<=0)return;let vn=b.vu*nx+b.vv*ny+b.vd*nd,force=Math.max(0,CONTACT_STIFFNESS*overlap-CONTACT_DAMPING*vn);f.u+=force*nx;f.v+=force*ny;f.d+=force*nd;let tx=b.vu-vn*nx,ty=b.vv-vn*ny,tz=b.vd-vn*nd,tm=Math.hypot(tx,ty,tz);if(tm>1e-5){let friction=Math.min(CONTACT_FRICTION*force,m*tm/dt);f.u-=friction*tx/tm;f.v-=friction*ty/tm;f.d-=friction*tz/tm}};
+      let cadHits=cadColliders?cadSurfaceContacts(storedBallWorld(name,b),r,name,h.up):[];
+      cadHits.forEach(c=>wall(c.penetration,c.normal.x,dot(c.normal,goal.tangent),-dot(c.normal,goal.normal)));
+      edges.forEach(e=>{if(cadHits.some(c=>e.nx*c.normal.x+e.ny*dot(c.normal,goal.tangent)>.85))return;wall(r-((b.u-e.ax)*e.nx+(b.v-e.ay)*e.ny),e.nx,e.ny,0)});
+      if(!cadHits.some(c=>c.kind==='封闭背板'))wall(r-(D-b.depth),0,0,-1)}
+    for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){let a=balls[i],b=balls[j],du=a.u-b.u,dv=a.v-b.v,dd=a.depth-b.depth,dist=Math.max(1e-6,Math.hypot(du,dv,dd)),ra=a.type==='nectar'?.0455:.0355,rb=b.type==='nectar'?.0455:.0355,overlap=ra+rb-dist;if(overlap<=0)continue;
+      let nx=du/dist,ny=dv/dist,nz=dd/dist,vn=(a.vu-b.vu)*nx+(a.vv-b.vv)*ny+(a.vd-b.vd)*nz,force=Math.max(0,CONTACT_STIFFNESS*overlap-CONTACT_DAMPING*vn);forces[i].u+=force*nx;forces[i].v+=force*ny;forces[i].d+=force*nz;forces[j].u-=force*nx;forces[j].v-=force*ny;forces[j].d-=force*nz}
+    for(let i=0;i<balls.length;i++){let b=balls[i],f=forces[i],m=ballMass[b.type];b.vu+=f.u/m*dt;b.vv+=f.v/m*dt;b.vd+=f.d/m*dt;b.u+=b.vu*dt;b.v+=b.vv*dt;b.depth+=b.vd*dt}
+    if(step>300&&step%50===0&&balls.every(b=>Math.hypot(b.vu,b.vv,b.vd)<.03))break;
+  }
+}
+function storedBallWorld(name,b){let goal=currentCellGeometry(name,hives[name].up);return {x:goal.x+b.u,y:goal.y+b.v*goal.tangent.y-b.depth*goal.normal.y,z:goal.z+b.v*goal.tangent.z-b.depth*goal.normal.z}}
+function integrate(){
+  let p=initial(),dt=.005,arr=[{...p,t:0}],cross=null,wall=null,inside=null,radius=num('diameter')/2;
+  let meshes=[];for(let name of ['red','blue'])for(let s of [-1,1])meshes.push(currentCellGeometry(name,s));
+  let goal=meshes.find(m=>m.x===targetX()&&m.s===sign()),origin=goal.aperture[0];
+  for(let i=1;i<=1200;i++){
+    const prev={...p};flightStep(p,dt);
+    const t=i*dt;
+    let f0=dot(sub(prev,origin),goal.normal),f1=dot(sub(p,origin),goal.normal);
+    let qCross=f0>0&&f1<=0?f0/(f0-f1):Infinity;
+    let candidate=qCross<Infinity?{x:prev.x+(p.x-prev.x)*qCross,y:prev.y+(p.y-prev.y)*qCross,z:prev.z+(p.z-prev.z)*qCross}:null;
+    let canEnter=candidate&&insideOpening(candidate,goal,radius);
+    for(let j=1;j<=4;j++){let q=canEnter?Math.min(j/4,qCross):j/4;if(j>1&&q===(Math.min((j-1)/4,qCross)))break;let sample={x:prev.x+(p.x-prev.x)*q,y:prev.y+(p.y-prev.y)*q,z:prev.z+(p.z-prev.z)*q,t:t-dt+dt*q};let contact=cellCollision(sample,meshes,radius);if(contact){wall={...sample,kind:contact.kind};break}}
+    if(wall){arr.push(wall);break}
+    if(qCross<Infinity){let q=qCross,c={x:prev.x+(p.x-prev.x)*q,y:prev.y+(p.y-prev.y)*q,z:prev.z+(p.z-prev.z)*q,t:t-dt+dt*q};
+      if(canEnter){cross={...c,inside:true};let incoming={...c,vx:prev.vx+(p.vx-prev.vx)*q,vy:prev.vy+(p.vy-prev.vy)*q,vz:prev.vz+(p.vz-prev.vz)*q};inside=simulateInside(incoming,goal);arr.push(...inside.track);break}
+      if(!cross)cross={...c,inside:false};}
+    arr.push({...p,t});
+    if(p.z<0||Math.abs(p.x)>5||Math.abs(p.y)>5)break;
+  }
+  return {arr,cross,wall,inside};
+}
+function compute(){syncTeam();let r=integrate();samples=r.arr;hit=r.cross;collision=r.wall;insideResult=r.inside;let t=target();let closest=samples.reduce((a,p)=>Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)<a.d?{p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)}:a,{d:Infinity});
+  result.innerHTML=collision?`<strong class="miss">碰到 CELL ${collision.kind}，投射失败</strong><br>碰撞时间：${collision.t.toFixed(3)} s<br>碰撞位置 X=${collision.x.toFixed(3)}, Y=${collision.y.toFixed(3)}, Z=${collision.z.toFixed(3)} m`:hit?(hit.inside?`<strong class="${insideResult?.retained?'hit':'miss'}">${insideResult?.retained?'命中开口并留在 CELL':'进入开口，但未留在 CELL'}</strong>`:'<strong class="miss">未进入开口</strong>')+`<br>穿越开口平面：t=${hit.t.toFixed(3)} s<br>交点 X=${hit.x.toFixed(3)}, Y=${hit.y.toFixed(3)}, Z=${hit.z.toFixed(3)} m<br>相对开口中心：ΔX=${((hit.x-t.x)*100).toFixed(1)} cm, ΔY=${((hit.y-t.y)*100).toFixed(1)} cm`+(insideResult?`<br>${insideResult.escaped?'从开口弹出；':insideResult.retained?'已在腔体内静止；':'在追踪时限内尚未稳定；'}内部碰撞 ${insideResult.events.length} 次；前三次：${insideResult.events.slice(0,3).map(e=>`${e.kind} (${e.t.toFixed(2)} s)`).join('、')||'无'}`:''):`<strong class="miss">未穿越开口平面</strong><br>轨迹距目标中心最近约 ${(closest.d*100).toFixed(1)} cm`;
+  updateBalance();draw();
+}
+function updateBalance(){let threshold=num('threshold');balance.innerHTML=['red','blue'].map(name=>{let h=hives[name],torque=h.addedMass*G*lever;return `<strong style="color:${name==='red'?'#fb8589':'#8abaff'}">${name==='red'?'红':'蓝'} HIVE</strong>：朝上 ${h.up>0?'+Y':'−Y'}，${h.nectar} NECTAR + ${h.pollen} POLLEN，翻转 ${h.tips} 次<br>附加力矩 ${torque.toFixed(2)} / ${threshold.toFixed(2)} N·m${h.moving?' · 正在下坠':''}`}).join('<br><br>')}
+function recordShot(name,type){let h=hives[name];h[type]++;h.addedMass+=ballMass[type];if(insideResult?.final){h.balls.push({type,...insideResult.final});settleStoredBalls(h)}if(h.addedMass*G*lever>=num('threshold'))h.moving=true;updateBalance()}
+function stepHive(h,dt){if(!h.moving)return false;let torque=h.addedMass*G*lever,I=.16,damping=.43,spring=.17;
+ let accel=(torque+spring*(Math.PI-h.angle)-damping*h.omega)/I;h.omega+=accel*dt;h.angle+=h.omega*dt;
+ if(h.angle>=Math.PI){h.angle=0;h.omega=0;h.moving=false;h.up*=-1;h.tips++;h.addedMass=0;h.nectar=0;h.pollen=0;h.balls=[];return true}return false}
+function resize(c){let d=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}let ctx=c.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return {ctx,w,h}}
+function projector(w,h){let ca=Math.cos(azimuth),sa=Math.sin(azimuth),ce=Math.cos(fixedElevation),se=Math.sin(fixedElevation),scale=Math.min(w/3.6,h/2.7);return p=>{let X=ca*p.x-sa*p.y,Y=sa*p.x+ca*p.y;return [w/2+X*scale,h*.73-(p.z*ce-Y*se)*scale]}}
+function line(ctx,P,pts,color,width=1,close=false){if(!pts.length)return;ctx.beginPath();let a=P(pts[0]);ctx.moveTo(...a);for(let p of pts.slice(1))ctx.lineTo(...P(p));if(close)ctx.closePath();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke()}
+function face(ctx,P,pts,color){ctx.beginPath();ctx.moveTo(...P(pts[0]));for(let p of pts.slice(1))ctx.lineTo(...P(p));ctx.closePath();ctx.fillStyle=color;ctx.fill()}
+function box(ctx,P,cx,cy,cz,w,d,h,color){let z0=cz-h/2,z1=cz+h/2;let corners=[];for(let z of [z0,z1])for(let yy of [-1,1])for(let xx of [-1,1])corners.push({x:cx+xx*w/2,y:cy+yy*d/2,z});for(let i of [0,1])for(let j of [0,1])line(ctx,P,[corners[i*4+j*2],corners[i*4+j*2+1]],color,1.5);for(let i of [0,1])for(let j of [0,1])line(ctx,P,[corners[i*4+j],corners[i*4+j+2]],color,1.5);for(let j=0;j<4;j++)line(ctx,P,[corners[j],corners[j+4]],color,1.5)}
+function cell(ctx,P,x,s,up,color,blend=1){let {aperture,back}=cellGeometry(x,s,up,blend),rgb=x>0?'100,155,230':'225,90,105';
+ face(ctx,P,back,`rgba(${rgb},0.55)`);
+ for(let i=0;i<aperture.length;i++){let j=(i+1)%aperture.length;face(ctx,P,[aperture[i],aperture[j],back[j],back[i]],`rgba(${rgb},${i===0?.42:i===2?.34:.28})`)}
+ line(ctx,P,aperture,color,3,true);line(ctx,P,back,color,1.5,true);for(let i=0;i<aperture.length;i++)line(ctx,P,[aperture[i],back[i]],color,1.5);return aperture}
+let cadRenderer=null,cadWorld=null,cadCamera=null,cadTrajectory=null,cadTrackSamples=null,cadImpactGroup=null,cadImpactRef=null,cadGroups={},cadBallGroups={},cadBallSignature={},cadSource=null,cadMarker=null,cadTarget=null,cadShotBall=null,cameraDistance=3.4,sideZoom=1;
+function initCAD(){if(typeof THREE==='undefined'||!window.HIVE_CAD_MESH)return;
+ cadRenderer=new THREE.WebGLRenderer({canvas:scene,antialias:true});cadRenderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));cadWorld=new THREE.Scene();cadWorld.background=new THREE.Color('#101b2a');
+ cadWorld.add(new THREE.AmbientLight(0xffffff,1.4));let light=new THREE.DirectionalLight(0xffffff,1.5);light.position.set(1,3,2);cadWorld.add(light);
+ let grid=new THREE.GridHelper(4.5,9,0x37536b,0x233b4d);cadWorld.add(grid);
+ const segment=(a,b,color)=>{let geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a),new THREE.Vector3(...b)]);cadWorld.add(new THREE.Line(geo,new THREE.LineBasicMaterial({color})))};
+ for(let sx of [-1,1])for(let sy of [-1,1])segment([sx*frameW/2,0,sy*frameD/2],[0,pivotZ,0],0xb2bcc7);
+ segment([-frameW/2,pivotZ,0],[frameW/2,pivotZ,0],0xd5dde5);
+ for(let name of ['red','blue']){let group=new THREE.Group();group.position.y=pivotZ;cadGroups[name]=group;cadWorld.add(group);
+  for(let side of ['plus','minus'])for(let part of ['rib','shell','back']){let raw=window.HIVE_CAD_MESH[name][side][part];if(!raw.length)continue;let verts=new Float32Array(raw.length);for(let i=0;i<raw.length;i+=3){verts[i]=raw[i];verts[i+1]=raw[i+2]-pivotZ;verts[i+2]=raw[i+1]}
+   let geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(verts,3));geo.computeVertexNormals();let color=name==='red'?0xfb666e:0x6ca9ff;
+   let mat=new THREE.MeshPhongMaterial({color,side:THREE.DoubleSide,transparent:part!=='rib',opacity:part==='rib'?1:part==='back'?.48:.25,depthWrite:part==='rib'});group.add(new THREE.Mesh(geo,mat))}cadBallGroups[name]=new THREE.Group();group.add(cadBallGroups[name])}
+ const sphere=(radius,color)=>{let mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,16,12),new THREE.MeshBasicMaterial({color}));cadWorld.add(mesh);return mesh};
+ cadSource=sphere(.035,0xffffff);cadMarker=sphere(.04,0xff5252);cadTarget=sphere(.025,0xffe066);cadShotBall=sphere(.035,0xffffff);cadShotBall.visible=false;cadImpactGroup=new THREE.Group();cadWorld.add(cadImpactGroup);
+ cadCamera=new THREE.PerspectiveCamera(45,1,.02,20)
+}
+function refreshCadBalls(name){let h=hives[name],signature=`${h.up}:${h.nectar}:${h.pollen}:${h.tips}`;if(cadBallSignature[name]===signature)return;cadBallSignature[name]=signature;let group=cadBallGroups[name];for(let child of [...group.children]){group.remove(child);child.geometry.dispose();child.material.dispose()}
+  cadGroups[name].updateMatrixWorld(true);h.balls.forEach(b=>{let r=b.type==='nectar'?.0455:.0355,mesh=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),new THREE.MeshPhongMaterial({color:b.type==='pollen'?0xf9df39:name==='red'?0xf14350:0x397cfa}));let p=storedBallWorld(name,b),local=cadGroups[name].worldToLocal(new THREE.Vector3(p.x,p.z,p.y));mesh.position.copy(local);group.add(mesh)})}
+function drawScene(){if(!cadRenderer)return;let w=scene.clientWidth,h=scene.clientHeight;cadRenderer.setSize(w,h,false);cadCamera.aspect=w/h;cadCamera.position.set(cameraDistance*Math.cos(azimuth)*Math.cos(fixedElevation),1.05+cameraDistance*Math.sin(fixedElevation),cameraDistance*Math.sin(azimuth)*Math.cos(fixedElevation));cadCamera.lookAt(0,1.05,0);cadCamera.updateProjectionMatrix();
+ for(let name of ['red','blue']){let hive=hives[name],initial=name==='red'?1:-1,flip=(hive.tips%2?1:0)+(hive.moving?(hive.tips%2?-1:1)*hive.angle/Math.PI:0);cadGroups[name].rotation.x=initial*flip*Math.PI/3;refreshCadBalls(name)}
+ if(cadTrackSamples!==samples){if(cadTrajectory){cadWorld.remove(cadTrajectory);cadTrajectory.geometry.dispose()}let points=samples.map(p=>new THREE.Vector3(p.x,p.z,p.y));cadTrajectory=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x69e5e0}));cadWorld.add(cadTrajectory);cadTrackSamples=samples}
+ if(cadImpactRef!==insideResult){for(let child of [...cadImpactGroup.children]){cadImpactGroup.remove(child);child.geometry.dispose();child.material.dispose()}for(let e of insideResult?.events.slice(0,30)||[]){let marker=new THREE.Mesh(new THREE.SphereGeometry(.012,8,6),new THREE.MeshBasicMaterial({color:0xffa04c}));marker.position.set(e.x,e.z,e.y);cadImpactGroup.add(marker)}cadImpactRef=insideResult}
+ cadSource.position.set(num('x'),num('z'),num('y'));let marker=collision||hit;cadMarker.visible=Boolean(marker);if(marker){cadMarker.position.set(marker.x,marker.z,marker.y);cadMarker.material.color.setHex(collision?0xff5252:hit.inside?0x61e5a0:0xff9273)}let aim=target();cadTarget.position.set(aim.x,aim.z,aim.y);cadRenderer.render(cadWorld,cadCamera)}
+function drawSide(){let {ctx,w,h}=resize(side);ctx.clearRect(0,0,w,h);ctx.fillStyle='#101b2a';ctx.fillRect(0,0,w,h);let scale=Math.min(w/3,h/2.5)*sideZoom,P=p=>[w*.5+(p.y-sign()*cellOffset)*scale,h*.82-p.z*scale];for(let z=0;z<=2;z+=.5){line(ctx,P,[{y:-2.5,z},{y:2.5,z}],'#233b4d');ctx.fillStyle='#8096aa';ctx.font='11px sans-serif';ctx.fillText(z.toFixed(1)+' m',5,h*.82-z*scale-3)}let mesh=currentCellGeometry(el.team.value,sign());line(ctx,P,[mesh.aperture[0],mesh.aperture[3]],'#ffe066',5);line(ctx,P,[mesh.back[0],mesh.back[3]],'#788898',2);line(ctx,P,[mesh.aperture[0],mesh.back[0]],'#788898',2);line(ctx,P,samples,'#69e5e0',2.5);ctx.fillStyle='#ffa04c';for(let e of insideResult?.events.slice(0,30)||[]){ctx.beginPath();ctx.arc(...P(e),3,0,2*Math.PI);ctx.fill()}let marker=collision||hit;if(marker){ctx.fillStyle=collision?'#ff5252':hit.inside?'#61e5a0':'#ff9273';ctx.beginPath();ctx.arc(...P(marker),5,0,2*Math.PI);ctx.fill()}}
+function draw(){drawScene();drawSide()}
+function openingMargin(p,m){let u=p.x-m.x,v=dot(sub(p,m),m.tangent),margin=Infinity;for(let i=0;i<outline.length;i++){let [ax,ay]=outline[i],[bx,by]=outline[(i+1)%outline.length],ex=bx-ax,ey=by-ay;margin=Math.min(margin,(ex*(v-ay)-ey*(u-ax))/Math.hypot(ex,ey))}return margin}
+function solve(){syncTeam();let originalA=el.angle.value,originalY=el.yaw.value,t=target(),goal=currentCellGeometry(el.team.value,sign()),best=null;
+ for(let [u,v] of [[0,0],[-.08,0],[.08,0],[0,-.06],[0,.06]]){let tx=t.x+u,ty=t.y+v*goal.tangent.y,yaw=Math.atan2(ty-num('y'),tx-num('x'))*180/Math.PI;el.yaw.value=yaw.toFixed(2);
+  for(let a=10;a<=85;a+=.5){el.angle.value=a.toFixed(2);let r=integrate();if(!r.wall&&r.cross&&r.cross.inside&&r.inside?.retained){let margin=openingMargin(r.cross,goal);if(!best||margin>best.margin)best={a,yaw,margin}}}}
+ if(best){el.angle.value=best.a.toFixed(2);el.yaw.value=best.yaw.toFixed(2);compute()}else{el.angle.value=originalA;el.yaw.value=originalY;compute();result.innerHTML+='<br><span class="miss">当前初速下没有找到可进入开口的角度；试着提高初速或调整发射点。</span>'}return best}
+ids.filter(id=>id!=='team'&&id!=='state').forEach(id=>el[id].addEventListener('input',compute));document.getElementById('aim').onclick=solve;document.getElementById('reset').onclick=()=>{azimuth=-.74;cameraDistance=3.4;sideZoom=1;draw()};document.getElementById('resetHive').onclick=()=>{if(playing)return;hives={red:newHive('red'),blue:newHive('blue')};Object.values(hives).forEach(settleStoredBalls);compute()};
+document.getElementById('play').onclick=()=>{if(playing||hives[el.team.value].moving)return;compute();playing=true;anim=0;let team=el.team.value,type=ballType(),success=Boolean(insideResult?.retained&&!collision),last=performance.now();document.getElementById('play').disabled=true;
+ function tick(now){let dt=Math.min((now-last)/1000,.04);last=now;anim+=dt;let flightEnd=samples[samples.length-1].t;let lo=0,hi=samples.length-1;while(lo<hi){let mid=(lo+hi+1)>>1;if(samples[mid].t<=anim)lo=mid;else hi=mid-1}let p=samples[lo];
+  if(anim>=flightEnd&&success){recordShot(team,type);success=false}
+  let tipped=false;for(let hive of Object.values(hives))tipped=stepHive(hive,dt)||tipped;
+  if(tipped){syncTeam();compute()}
+  if(cadShotBall){cadShotBall.visible=anim<flightEnd&&Boolean(p);if(cadShotBall.visible){cadShotBall.position.set(p.x,p.z,p.y);cadShotBall.scale.setScalar(num('diameter')/.071)}}draw();
+  updateBalance();if(anim<flightEnd||Object.values(hives).some(h=>h.moving)){requestAnimationFrame(tick)}else{playing=false;if(cadShotBall)cadShotBall.visible=false;draw();document.getElementById('play').disabled=false}}
+ requestAnimationFrame(tick)};
+function applyControlInput(input={}){if(playing)throw new Error('Wait for the current shot animation to finish');let map={x:'x',y:'y',z:'z',speed:'speed',angleDeg:'angle',yawDeg:'yaw',drag:'drag',releaseTorque:'threshold'};
+ for(let [key,id] of Object.entries(map))if(input[key]!==undefined){if(typeof input[key]!=='number'||!Number.isFinite(input[key]))throw new TypeError(`${key} must be a finite number`);el[id].value=String(input[key])}
+ if(input.ballType!==undefined){if(!['pollen','nectar'].includes(input.ballType))throw new TypeError('ballType must be pollen or nectar');el.diameter.value=input.ballType==='pollen'?'0.071':'0.091'}
+ syncTeam()}
+function controlState(){syncTeam();return {units:{position:'m',speed:'m/s',angle:'deg',torque:'N·m',time:'s'},nearestHive:el.team.value,targetCellSide:sign(),target:target(),hives:JSON.parse(JSON.stringify(hives))}}
+function controlPrediction(){let status=collision?'collision':insideResult?.retained?'hit':'miss';return {status,team:el.team.value,cellSide:sign(),angleDeg:num('angle'),yawDeg:num('yaw'),speed:num('speed'),ballType:ballType(),dragCoefficient:num('drag'),flightTime:hit?.t??collision?.t??null,hitPoint:hit?{x:hit.x,y:hit.y,z:hit.z}:null,collision:collision?{kind:collision.kind,x:collision.x,y:collision.y,z:collision.z,t:collision.t}:null,internalCollisions:insideResult?.events.map(e=>({kind:e.kind,t:e.t,x:e.x,y:e.y,z:e.z}))??[],retained:insideResult?.retained??false,target:target()}}
+window.HiveControl={
+ getState:controlState,
+ predict(input={}){applyControlInput(input);compute();return controlPrediction()},
+ solve(input={}){applyControlInput(input);let solution=solve();return solution?{...controlPrediction(),openingClearance:solution.margin}: {status:'unreachable',team:el.team.value,cellSide:sign(),target:target()}},
+ fire(input={}){applyControlInput(input);compute();let prediction=controlPrediction(),tipped=false;if(prediction.status==='hit'){let h=hives[el.team.value];recordShot(el.team.value,prediction.ballType);for(let i=0;i<5000&&h.moving;i++)tipped=stepHive(h,.005)||tipped;compute()}return {shot:prediction,tipped,state:controlState()}},
+ reset(){if(playing)throw new Error('Cannot reset while a shot is animating');hives={red:newHive('red'),blue:newHive('blue')};Object.values(hives).forEach(settleStoredBalls);compute();return controlState()}
+};
+let dragX=null;scene.addEventListener('pointerdown',e=>{dragX=e.clientX;scene.setPointerCapture(e.pointerId)});scene.addEventListener('pointermove',e=>{if(dragX===null)return;azimuth+=(e.clientX-dragX)*.007;dragX=e.clientX;draw()});scene.addEventListener('pointerup',()=>dragX=null);
+scene.addEventListener('wheel',e=>{e.preventDefault();cameraDistance=Math.max(1.15,Math.min(9,cameraDistance*Math.exp(e.deltaY*.001)));draw()},{passive:false});
+side.addEventListener('wheel',e=>{e.preventDefault();sideZoom=Math.max(.5,Math.min(4,sideZoom*Math.exp(-e.deltaY*.001)));draw()},{passive:false});
+window.addEventListener('resize',draw);if(!window.HIVE_CAD_MESH)Object.values(hives).forEach(settleStoredBalls);buildCadColliders();initCAD();compute();
+</script></body></html>
