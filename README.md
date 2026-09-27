@@ -6,6 +6,23 @@ Live version: <https://lazer2077.github.io/BIOBUZZ_Simulator/> (GitHub Pages; `.
 
 Enter a launch point, speed and angles, and the page shows the 3D trajectory, a side view and the collision result. The target is whichever HIVE, red or blue, is closer in X to the launch point. **Solve angle** searches for a collision-free trajectory into the opening at the current launch speed; only **Launch one ball** adds a scoring ball to the HIVE.
 
+## Keyboard controls
+
+Keys work when no input box has focus (click the 3D view or blank space first). A press applies one fine step; after 200 ms a held key keeps changing the value, and holding Shift makes it faster. While a key is held the trajectory is recomputed at most every 80 ms.
+
+| Key | Action | Press / hold rate (Shift faster) |
+|---|---|---|
+| W A S D | Move the launch point relative to the 3D view: W away from the camera, S toward it, A/D screen left/right; kept inside the 144 in field | 0.6 m/s (1.5 m/s) |
+| ↑ ↓ | Elevation | 0.1° / 8°/s |
+| ← → | Yaw (wraps to −180…180°) | 0.2° / 15°/s |
+| Q E | Launch speed −/+ | 0.05 m/s / 1 m/s per s |
+| R F | Launch height +/− | 1 cm / 0.2 m/s |
+| Z X | Orbit the 3D view | — |
+| B | Toggle POLLEN / NECTAR | — |
+| Enter | Solve angle | — |
+| Space | Launch one ball | — |
+| C | Reset view | — |
+
 ## Model dimensions
 
 - Units are metres and seconds. X runs between the red and blue HIVEs, Y between the two CELLs of one HIVE, and Z is up. The origin is the floor projection of the frame pivot.
@@ -50,7 +67,7 @@ Methods:
 
 Collision `kind` values returned by the API (`封闭背板` closed back panel, `侧面` side panel, `开口边框` opening rim, `内壁 n` inner wall n) are fixed identifiers and do not change with the page language.
 
-Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API and the Chinese and English page text.
+Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API, the Chinese and English page text and the keyboard controls.
 
 ## Check against official sources (2026-27 Competition Manual TU02)
 

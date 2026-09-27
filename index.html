@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-i18n="title">BIOBUZZ HIVE 射击模拟器</title>
 <style>
-:root{font-family:system-ui,"Microsoft YaHei",sans-serif;color:#eaf0f8;background:#0d1420}*{box-sizing:border-box}body{margin:0}header{padding:18px 24px;background:#172335;border-bottom:1px solid #304158}h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#9fb2c8;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;min-height:calc(100vh - 83px)}main{padding:16px;min-width:0}.panel{background:#142033;border:1px solid #31445b;border-radius:12px;padding:14px}.views{display:grid;grid-template-columns:2fr 1fr;gap:12px}canvas{width:100%;height:530px;display:block;background:#101b2a;border-radius:8px;cursor:grab}canvas:active{cursor:grabbing}aside{padding:16px;background:#111d2d;border-left:1px solid #304158;overflow:auto}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:20px 0 9px;color:#b4c9df}.field{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:8px;margin:9px 0}.field label{font-size:13px;color:#c4d2e1}.field input,.field select{width:100%;background:#1e3046;color:#fff;border:1px solid #49627c;border-radius:6px;padding:6px}.field input:focus,.field select:focus{outline:2px solid #48b5f5}button{background:#286aa3;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;margin:4px 4px 4px 0}button:hover{background:#3487cd}.result{margin-top:14px;padding:12px;border-radius:8px;background:#1c3044;line-height:1.55;font-size:13px}.hit{color:#61e5a0}.miss{color:#ffbd77}.legend{font-size:12px;color:#9fb2c8;line-height:1.6;margin-top:12px}.note{font-size:12px;color:#aebfd0;line-height:1.5;margin-top:12px}a{color:#8cccff}.headline{display:flex;align-items:center;justify-content:space-between;gap:12px}.lang{margin:0;padding:6px 12px;background:#1e3046;border:1px solid #49627c;font-size:13px}.lang:hover{background:#2a4360}@media(max-width:950px){.layout{display:block}.views{grid-template-columns:1fr}canvas{height:380px}aside{border-left:0}}
+:root{font-family:system-ui,"Microsoft YaHei",sans-serif;color:#eaf0f8;background:#0d1420}*{box-sizing:border-box}body{margin:0}header{padding:18px 24px;background:#172335;border-bottom:1px solid #304158}h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#9fb2c8;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;min-height:calc(100vh - 83px)}main{padding:16px;min-width:0}.panel{background:#142033;border:1px solid #31445b;border-radius:12px;padding:14px}.views{display:grid;grid-template-columns:2fr 1fr;gap:12px}canvas{width:100%;height:530px;display:block;background:#101b2a;border-radius:8px;cursor:grab}canvas:active{cursor:grabbing}aside{padding:16px;background:#111d2d;border-left:1px solid #304158;overflow:auto}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:20px 0 9px;color:#b4c9df}.field{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:8px;margin:9px 0}.field label{font-size:13px;color:#c4d2e1}.field input,.field select{width:100%;background:#1e3046;color:#fff;border:1px solid #49627c;border-radius:6px;padding:6px}.field input:focus,.field select:focus{outline:2px solid #48b5f5}button{background:#286aa3;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;margin:4px 4px 4px 0}button:hover{background:#3487cd}.result{margin-top:14px;padding:12px;border-radius:8px;background:#1c3044;line-height:1.55;font-size:13px}.hit{color:#61e5a0}.miss{color:#ffbd77}.legend{font-size:12px;color:#9fb2c8;line-height:1.6;margin-top:12px}.note{font-size:12px;color:#aebfd0;line-height:1.5;margin-top:12px}a{color:#8cccff}.headline{display:flex;align-items:center;justify-content:space-between;gap:12px}.lang{margin:0;padding:6px 12px;background:#1e3046;border:1px solid #49627c;font-size:13px}.lang:hover{background:#2a4360}.keys{width:100%;border-collapse:collapse;margin-top:4px}.keys td{padding:3px 0;vertical-align:top}.keys td:first-child{white-space:nowrap;padding-right:10px}kbd{display:inline-block;min-width:20px;padding:1px 5px;margin:1px 1px;border:1px solid #49627c;border-bottom-width:2px;border-radius:4px;background:#1e3046;color:#fff;font:12px ui-monospace,monospace;text-align:center}@media(max-width:950px){.layout{display:block}.views{grid-template-columns:1fr}canvas{height:380px}aside{border-left:0}}
 </style>
 </head>
 <body>
@@ -27,6 +27,7 @@
 <div class="result" id="balance"></div>
 <div class="note" data-i18n="note">飞行采用平方阻力，Cᴅ=0.3–1.0 是同类穿孔球的探索范围，不是 NECTAR 实测值。CELL 内外的侧板和背板按 CAD 网格计算；边缘用与 CAD 对齐的五边形约束，弹簧阻尼接触追踪至弹出、静止或 3 秒上限。橙点标出接触位置。碰撞次数仅供观察，不决定留球。初始三颗球先经重力和球间接触沉降。球体弹性与最终留球率须实测标定。</div>
 <div class="note" data-i18n-html="sources">资料：<a href="https://ftc-resources.firstinspires.org/ftc/game/manual" target="_blank">竞赛手册 §9.6、§10.3、§10.5</a> · <a href="https://ftc-resources.firstinspires.org/ftc/field/initialfieldguide" target="_blank">CELL 装配指南</a> · <a href="https://andymark.com/products/biobuzz-scoring-elements" target="_blank">球重量</a> · <a href="https://www.youtube.com/watch?v=sUH3z5a5S9I&t=200s" target="_blank">官方动画</a></div>
+<div class="note" data-i18n-html="keys"></div>
 </aside></div>
 <script src="vendor/three.min.js"></script>
 <script src="cad/hive-mesh.js"></script>
@@ -47,6 +48,7 @@ const I18N={
  zh:{title:'BIOBUZZ HIVE 射击模拟器',heading:'FTC BIOBUZZ · HIVE 射击模拟器',intro:'SI 单位计算；左右拖动三维视图绕 Z 轴旋转，滚轮放大或缩小视图。轨迹和开口尺寸用于高射控制算法初步验证。',scene:'三维场景',sideView:'侧视图 / 轨迹',
   legend:'蓝色 / 红色：两组 HIVE；黄色：所选开口；青色：球轨迹；白色：发射点。坐标：X 沿红蓝 HIVE 排列方向，Y 沿每组两个 CELL 排列方向，Z 向上。中心转轴位于 X=0、Y=0。',launch:'发射与目标',team:'最近的 HIVE',red:'红色',blue:'蓝色',upCell:'朝上的 CELL',plusY:'+Y 侧',minusY:'−Y 侧',
   x:'发射点 X (m)',y:'发射点 Y (m)',z:'发射高度 Z (m)',speed:'初速 (m/s)',angle:'仰角 (°)',yaw:'水平角 (°)',ball:'球直径',drag:'阻力系数 Cᴅ (估算 0.3–1.0)',threshold:'翻转附加力矩 (N·m)',aim:'自动求解角度',play:'发射一球',resetView:'重置视角',resetHive:'重置 HIVE',
+  keys:`<strong>键盘操作</strong>（焦点不在输入框时）<table class="keys"><tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>移动发射点（相对三维视角：W 远离镜头，A/D 屏幕左右）</td></tr><tr><td><kbd>↑</kbd><kbd>↓</kbd></td><td>仰角 ±</td></tr><tr><td><kbd>←</kbd><kbd>→</kbd></td><td>水平角 ±</td></tr><tr><td><kbd>Q</kbd><kbd>E</kbd></td><td>初速 −/+</td></tr><tr><td><kbd>R</kbd><kbd>F</kbd></td><td>发射高度 +/−</td></tr><tr><td><kbd>Z</kbd><kbd>X</kbd></td><td>旋转三维视角</td></tr><tr><td><kbd>B</kbd></td><td>切换 POLLEN / NECTAR</td></tr><tr><td><kbd>Enter</kbd></td><td>自动求解角度</td></tr><tr><td><kbd>空格</kbd></td><td>发射一球</td></tr><tr><td><kbd>C</kbd></td><td>重置视角</td></tr><tr><td><kbd>Shift</kbd></td><td>按住加快移动和调整</td></tr></table>`,
   note:'飞行采用平方阻力，Cᴅ=0.3–1.0 是同类穿孔球的探索范围，不是 NECTAR 实测值。CELL 内外的侧板和背板按 CAD 网格计算；边缘用与 CAD 对齐的五边形约束，弹簧阻尼接触追踪至弹出、静止或 3 秒上限。橙点标出接触位置。碰撞次数仅供观察，不决定留球。初始三颗球先经重力和球间接触沉降。球体弹性与最终留球率须实测标定。',
   sources:['资料：','竞赛手册 §9.6、§10.3、§10.5','CELL 装配指南','球重量','官方动画'],switchTo:'English',
   kinds:{'封闭背板':'封闭背板','侧面':'侧面','开口边框':'开口边框','内壁':'内壁'},
@@ -56,6 +58,7 @@ const I18N={
  en:{title:'BIOBUZZ HIVE Shot Simulator',heading:'FTC BIOBUZZ · HIVE Shot Simulator',intro:'SI units. Drag the 3D view left or right to orbit around Z; scroll to zoom. Trajectories and opening dimensions are for early validation of launcher control algorithms.',scene:'3D scene',sideView:'Side view / trajectory',
   legend:'Blue / red: the two HIVEs; yellow: selected opening; cyan: ball trajectory; white: launch point. Axes: X runs between the red and blue HIVEs, Y between the two CELLs of a HIVE, Z is up. The pivot is at X=0, Y=0.',launch:'Launch and target',team:'Nearest HIVE',red:'Red',blue:'Blue',upCell:'Upward CELL',plusY:'+Y side',minusY:'−Y side',
   x:'Launch X (m)',y:'Launch Y (m)',z:'Launch height Z (m)',speed:'Launch speed (m/s)',angle:'Elevation (°)',yaw:'Yaw (°)',ball:'Ball',drag:'Drag coefficient Cᴅ (est. 0.3–1.0)',threshold:'Tip torque threshold (N·m)',aim:'Solve angle',play:'Launch one ball',resetView:'Reset view',resetHive:'Reset HIVEs',
+  keys:`<strong>Keyboard</strong> (when no input box has focus)<table class="keys"><tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Move the launch point (relative to the 3D view: W away from the camera, A/D screen left/right)</td></tr><tr><td><kbd>↑</kbd><kbd>↓</kbd></td><td>Elevation up/down</td></tr><tr><td><kbd>←</kbd><kbd>→</kbd></td><td>Yaw left/right</td></tr><tr><td><kbd>Q</kbd><kbd>E</kbd></td><td>Launch speed −/+</td></tr><tr><td><kbd>R</kbd><kbd>F</kbd></td><td>Launch height +/−</td></tr><tr><td><kbd>Z</kbd><kbd>X</kbd></td><td>Orbit the 3D view</td></tr><tr><td><kbd>B</kbd></td><td>Toggle POLLEN / NECTAR</td></tr><tr><td><kbd>Enter</kbd></td><td>Solve angle</td></tr><tr><td><kbd>Space</kbd></td><td>Launch one ball</td></tr><tr><td><kbd>C</kbd></td><td>Reset view</td></tr><tr><td><kbd>Shift</kbd></td><td>Hold to move and adjust faster</td></tr></table>`,
   note:'Flight uses quadratic drag; Cᴅ = 0.3–1.0 is an exploratory range for similar perforated balls, not a measured NECTAR value. CELL side and back panels use the CAD mesh; edges use a pentagon proxy aligned with the CAD, and spring-damper contact is tracked until the ball escapes, settles or 3 s elapse. Orange dots mark contacts. Contact count is informational and does not decide retention. The three starting balls first settle under gravity and ball-to-ball contact. Ball elasticity and real retention rates must be calibrated on a physical field.',
   sources:['Sources: ','Competition Manual §9.6, §10.3, §10.5','CELL assembly guide','Ball weights','Official animation'],switchTo:'中文',
   kinds:{'封闭背板':'closed back panel','侧面':'side panel','开口边框':'opening rim','内壁':'inner wall'},
@@ -69,6 +72,7 @@ let lang=initialLanguage();const T=()=>I18N[lang];
 const kindLabel=kind=>kind.replace(/^(封闭背板|侧面|开口边框|内壁)/,k=>T().kinds[k]);
 function applyLanguage(){if(typeof document.querySelectorAll!=='function')return;let d=T();document.documentElement.lang=lang==='zh'?'zh-CN':'en';
  document.querySelectorAll('[data-i18n]').forEach(node=>{node.textContent=d[node.dataset.i18n]});
+ document.querySelectorAll('[data-i18n-html="keys"]').forEach(node=>{node.innerHTML=d.keys});
  document.querySelectorAll('[data-i18n-html="sources"]').forEach(node=>{let links=node.querySelectorAll('a');node.firstChild.textContent=d.sources[0];links.forEach((a,i)=>a.textContent=d.sources[i+1])});
  let button=document.getElementById('lang');if(button)button.textContent=d.switchTo}
 const newHive=name=>({up:name==='red'?1:-1,addedMass:0,pollen:0,nectar:3,tips:0,angle:0,omega:0,moving:false,
@@ -257,6 +261,34 @@ window.HiveControl={
  fire(input={}){applyControlInput(input);compute();let prediction=controlPrediction(),tipped=false;if(prediction.status==='hit'){let h=hives[el.team.value];recordShot(el.team.value,prediction.ballType);for(let i=0;i<5000&&h.moving;i++)tipped=stepHive(h,.005)||tipped;compute()}return {shot:prediction,tipped,state:controlState()}},
  reset(){if(playing)throw new Error('Cannot reset while a shot is animating');hives={red:newHive('red'),blue:newHive('blue')};Object.values(hives).forEach(settleStoredBalls);compute();return controlState()}
 };
+// Keyboard control. A press applies one fine step; after 200 ms a held key changes its value at a rate per second.
+// The trajectory is recomputed at most every 80 ms because a shot that enters a CELL takes tens of ms to simulate.
+const FIELD_HALF=72*IN,clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v)),clock=()=>typeof performance!=='undefined'?performance.now():Date.now();
+const KEY_RATES={ArrowUp:['angle',8,.1],ArrowDown:['angle',-8,-.1],ArrowRight:['yaw',15,.2],ArrowLeft:['yaw',-15,-.2],KeyE:['speed',1,.05],KeyQ:['speed',-1,-.05],KeyR:['z',.2,.01],KeyF:['z',-.2,-.01]};
+const MOVE_KEYS=['KeyW','KeyA','KeyS','KeyD'],ORBIT_KEYS={KeyZ:-1.2,KeyX:1.2};
+const held=new Map();let shiftHeld=false,keyLoop=0,lastKeyTick=0,lastKeyCompute=-Infinity,keyDirty=false;
+function setControl(id,value){let limits={angle:[-10,89,2],speed:[.1,20,2],z:[.05,1.5,3],x:[-FIELD_HALF,FIELD_HALF,3],y:[-FIELD_HALF,FIELD_HALF,3]}[id];
+ if(id==='yaw'){value=((value+180)%360+360)%360-180;el.yaw.value=value.toFixed(2)}else el[id].value=String(clamp(Number(value.toFixed(limits[2])),limits[0],limits[1]));keyDirty=true}
+function moveLaunch(dt){let forward=(held.has('KeyW')?1:0)-(held.has('KeyS')?1:0),rightward=(held.has('KeyD')?1:0)-(held.has('KeyA')?1:0);if(!forward&&!rightward)return;
+ // Directions follow the Three.js camera, whose screen axes map to field X and Y as below.
+ let length=Math.hypot(forward,rightward),step=(shiftHeld?1.5:.6)*dt/length,f={x:-Math.cos(azimuth),y:-Math.sin(azimuth)},r={x:Math.sin(azimuth),y:-Math.cos(azimuth)};
+ setControl('x',num('x')+(forward*f.x+rightward*r.x)*step);setControl('y',num('y')+(forward*f.y+rightward*r.y)*step)}
+function keyTick(now=clock()){keyLoop=0;let dt=Math.min((now-lastKeyTick)/1000,.05);lastKeyTick=now;
+ for(let [code,rate] of Object.entries(ORBIT_KEYS))if(held.has(code)){azimuth+=rate*(shiftHeld?2.5:1)*dt;draw()}
+ if(!playing){moveLaunch(dt);for(let [code,[id,rate]] of Object.entries(KEY_RATES))if(held.has(code)&&now-held.get(code)>200)setControl(id,num(id)+rate*(shiftHeld?4:1)*dt)}
+ if(keyDirty&&now-lastKeyCompute>=80){keyDirty=false;lastKeyCompute=now;compute()}
+ if(held.size||keyDirty)keyLoop=requestAnimationFrame(keyTick)}
+function startKeyLoop(){if(!keyLoop){lastKeyTick=clock();keyLoop=requestAnimationFrame(keyTick)}}
+function keyDown(e){let tag=e.target&&e.target.tagName;if(e.ctrlKey||e.metaKey||e.altKey||tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA')return;if(tag==='BUTTON')e.target.blur();shiftHeld=e.shiftKey;let code=e.code;
+ if(code==='Space'){e.preventDefault?.();if(!e.repeat)document.getElementById('play').onclick();return}
+ if(code==='Enter'){e.preventDefault?.();if(!e.repeat&&!playing)solve();return}
+ if(code==='KeyB'){if(!e.repeat&&!playing){el.diameter.value=el.diameter.value==='0.071'?'0.091':'0.071';compute()}return}
+ if(code==='KeyC'){if(!e.repeat)document.getElementById('reset').onclick();return}
+ if(!(code in KEY_RATES)&&!MOVE_KEYS.includes(code)&&!(code in ORBIT_KEYS))return;
+ e.preventDefault?.();if(!held.has(code)&&!e.repeat&&code in KEY_RATES&&!playing){let [id,,tap]=KEY_RATES[code];setControl(id,num(id)+tap*(shiftHeld?5:1))}
+ if(!held.has(code))held.set(code,clock());startKeyLoop()}
+function keyUp(e){shiftHeld=e.shiftKey;held.delete(e.code)}
+el.diameter.addEventListener('change',()=>el.diameter.blur?.());window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp);window.addEventListener('blur',()=>held.clear());
 let dragX=null;scene.addEventListener('pointerdown',e=>{dragX=e.clientX;scene.setPointerCapture(e.pointerId)});scene.addEventListener('pointermove',e=>{if(dragX===null)return;azimuth+=(e.clientX-dragX)*.007;dragX=e.clientX;draw()});scene.addEventListener('pointerup',()=>dragX=null);
 scene.addEventListener('wheel',e=>{e.preventDefault();cameraDistance=Math.max(1.15,Math.min(9,cameraDistance*Math.exp(e.deltaY*.001)));draw()},{passive:false});
 side.addEventListener('wheel',e=>{e.preventDefault();sideZoom=Math.max(.5,Math.min(4,sideZoom*Math.exp(-e.deltaY*.001)));draw()},{passive:false});
