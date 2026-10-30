@@ -57,6 +57,19 @@ const robust = L.estimate(noisy.detections);
 assert.deepEqual(robust.outlierTagIds, [noisy.detections[1].id]);
 assert.ok(Math.hypot(robust.x-poses[0].x, robust.y-poses[0].y) < .03, 'the pose must stay accurate after outlier removal');
 
+// Camera pitch: the real camera tilted from its calibration (chassis pitch, mounting error). Solving for pitch too,
+// held to the calibration by a ±3° prior, removes the range error that a fixed pitch causes.
+for (const robot of poses.slice(0,3)) {
+  const tilted = L.detect({robot, camera:{pitchDeg:12}, pixelNoise:0});
+  const fixed = L.estimate(tilted.detections), free = L.estimate(tilted.detections, {pitchPriorDeg:3});
+  assert.ok(Math.hypot(fixed.x-robot.x, fixed.y-robot.y) > .08, 'a 2° pitch error must bias the fixed-pitch solve by several cm');
+  assert.ok(Math.hypot(free.x-robot.x, free.y-robot.y) < 1e-3 && Math.abs(free.pitchDeg-12) < .01, 'estimating pitch must recover the pose and the true 12° pitch');
+}
+const calm = L.localize({robot:poses[0], pixelNoise:.5, seed:5, pitchPriorDeg:3});
+assert.ok(calm.error.position < .02 && Math.abs(calm.estimate.pitchDeg-10) < .5, 'with an exact calibration, estimating pitch costs little');
+const viaLocalize = L.localize({robot:poses[1], camera:{pitchDeg:7}, solverCamera:{pitchDeg:10}, pitchPriorDeg:3, pixelNoise:0});
+assert.ok(viaLocalize.error.position < 1e-3, 'localize must solve with solverCamera while seeing through camera');
+
 // Detector rejection reasons, on a vertical test tag.
 const wall = [{id:1,x:0,y:1.8,z:.3,yawDeg:-90,size:.165}];
 const facing = {x:0,y:0,headingDeg:90}, camera = {pitchDeg:0};
@@ -114,6 +127,9 @@ require('./vendor/apriltag-wasm.js')().then(Module => {
   assert.ok(distorted.detections.length >= 4 && distorted.error.position < .03, 'undistorting the corners with the known k1 must keep the pose accurate');
   const [xd, yd] = C.distort(.3, -.2, {k1:-.3, k2:.05}), [xu, yu] = C.undistort(xd, yd, {k1:-.3, k2:.05});
   assert.ok(Math.hypot(xu-.3, yu+.2) < 1e-9, 'undistort must invert distort');
+
+  const tiltedImage = C.localizeFromImage({detector, robot, layouts, camera:{pitchDeg:13}, solverCamera:{pitchDeg:10}, pitchPriorDeg:3, effects:{noise:2}, detectorOptions:{decimate:1}});
+  assert.ok(tiltedImage.error.position < .015 && Math.abs(tiltedImage.estimate.pitchDeg-13) < .3, 'the image pipeline must recover a 3° pitch error: ' + JSON.stringify(tiltedImage.error));
 
   const blurred = C.localizeFromImage({detector, robot, layouts, effects:{turnRateDegS:150}, detectorOptions:{decimate:1}});
   assert.equal(blurred.detections.length, 0, 'a 150°/s turn over an 8 ms exposure smears the small CELL tags beyond decoding');

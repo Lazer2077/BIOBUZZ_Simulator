@@ -78,7 +78,16 @@ Green: accepted detections (raw corners; m is the decision margin). Orange: disc
 - **Rendered frame (`camera-render.js`):** a software ray caster renders a 640×480, 1280×720 or 1280×800 grayscale image of the tiles and seams, the perimeter walls, the tags (black square plus the white ring), the CELL panels and the HIVE frame legs and crossbar. 640×480 uses 2×2 supersampling. Optional effects: motion blur (sub-frames over the exposure from the forward speed and turn rate), Brown–Conrady radial distortion `k1` (outside the lens image circle stays black), defocus blur, exposure gain and Gaussian sensor noise. A frame renders in about 0.4–0.9 s in the browser, so the page re-renders 180 ms after the last change. "Geometry + corner noise" mode (key M) skips rendering and is instant.
 - **Pose solver (`localization.js`):** detector corners are undistorted with the known calibration.
   - **Initial pose:** the tags are tilted, so this works for any tag orientation. With the camera height and pitch known, a heading fixes every corner's viewing ray. The camera position then follows from a linear least-squares fit of those rays through the known corners. The heading is scanned in 2° steps and narrowed by golden-section search, which is exact without noise, even from one tag.
-  - **Refinement:** Levenberg–Marquardt minimizes the corner reprojection error over `(x, y, heading)` with Huber weights. With 3 or more tags, a tag whose RMS exceeds 4 px is removed and the solve repeats.
+  - **Refinement:** Levenberg–Marquardt minimizes the corner reprojection error over `(x, y, heading, camera pitch)` with Huber weights. The pitch is held to its calibrated value by a ±3° prior; this can be turned off ("Also estimate camera pitch") to solve `(x, y, heading)` with a fixed pitch. With 3 or more tags, a tag whose RMS exceeds 4 px is removed and the solve repeats.
+  - **Why pitch is estimated:** the tags hang 0.9–1.3 m up, so range comes largely from elevation, and with a fixed pitch a 1° camera tilt from chassis pitch or mounting moves the pose by about 6 cm, and −3° by about 18 cm. Six shooting positions with vision aim, where "Actual pitch offset" tilts the real camera away from the calibration:
+
+    | Pitch offset | Fixed pitch: shots scoring / worst position error | Pitch estimated: shots scoring / worst position error |
+    |---|---|---|
+    | 0° | 18/18 / 0.8 cm | 18/18 / 1.0 cm |
+    | +2° | 12/18 / 16 cm | 18/18 / 0.8 cm |
+    | −3° | 0/18 / 32 cm | 18/18 / 1.1 cm |
+
+    The rendered image with the real detector gives the same picture (−3°: 0/6 against 6/6). Estimating pitch also absorbs most of a camera height error (+3 cm: 6 cm → 1.2 cm). With exact calibration it costs almost nothing (0.6 → 0.7 cm RMS). From a single tag it is slightly worse, but the quality gate rejects a lone distant tag anyway.
   - **Uncertainty:** the 1σ comes from `s²(JᵀJ)⁻¹`. In image mode it also includes a 0.3 px per-corner bias floor that frame averaging does not remove.
   - **Fusion:** several frames (fresh sensor noise each, robot static) are fused with a Kalman filter that also takes odometry.
 - **Quality gate:** an estimate is not used in two cases. One is when the expected motion blur `fx·|ω|·T + fx·|v|·T/1.5` exceeds 2 px. The other is when only one tag is seen and it is more than 1.5 m away. The reprojection residual does not reveal either failure.
@@ -88,7 +97,7 @@ Limits:
 - The cluster's position along the CELL is derived from the manual's figures, and checked against the official CAD bottom panel; the depth along the CELL relies on reading "Front of Cell" in Figure 9-15 as the opening edge.
 - The simulator's Y axis is mirrored relative to the field (see above).
 - Lighting is a single directional light with no shadows, glare or rolling shutter.
-- Camera height, pitch and calibration are assumed exact.
+- Camera height, intrinsics and distortion are assumed exact; pitch is estimated around its calibration.
 - Robots and balls do not occlude the tags.
 
 ## Control API
@@ -114,7 +123,7 @@ Methods:
 - `solve({...})`: searches for a collision-free angle for the given launch point, speed and ball type; returns `unreachable` if none exists.
 - `fire({...})`: performs one launch with the current parameters; a hit adds the ball, and the HIVE advances to its next stable pose once the threshold is reached. The API computes this instantly; the page button animates it.
 - `reset()`: restores the official starting orientation with 3 NECTAR per HIVE.
-- `localize({...})`: runs the camera at the given pose (`x`, `y`, `yawDeg` as the heading) and returns the true and estimated pose, the error, 1σ, the detected tag IDs and the rejection reasons. It also accepts `cameraHeight`, `cameraPitchDeg`, `cameraFovDeg`, `frames` and an integer `seed`; `mode: 'image'` (rendered frame and real detector) or `'geometry'`, with `pixelNoise` for geometry and `sensorNoise`, `exposureGain`, `exposureMs`, `driveSpeed`, `turnRateDegS`, `k1`, `defocus`, `decimate` for image mode. `resolution` is `'640x480'`, `'1280x720'` or `'1280x800'`. The result adds `mode`, `gate`, `aim` (`yawErrDeg`, `lateralAtTarget`, `rangeError`), `hiveUp` (which CELL of each HIVE the tags say is up, or null if unseen), `timing` and `missedTagIds`. Image mode needs the detector: `await HiveControl.whenDetectorReady()` first.
+- `localize({...})`: runs the camera at the given pose (`x`, `y`, `yawDeg` as the heading) and returns the true and estimated pose, the error, 1σ, the detected tag IDs and the rejection reasons. It also accepts `cameraHeight`, `cameraPitchDeg`, `cameraFovDeg`, `frames` and an integer `seed`; `mode: 'image'` (rendered frame and real detector) or `'geometry'`, with `pixelNoise` for geometry and `sensorNoise`, `exposureGain`, `exposureMs`, `driveSpeed`, `turnRateDegS`, `k1`, `defocus`, `decimate` for image mode. `resolution` is `'640x480'`, `'1280x720'` or `'1280x800'`; `pitchErrorDeg` tilts the real camera away from its calibration and `estimatePitch` (default true) solves for pitch. The result also has `pitchDeg`, the estimated pitch. The result adds `mode`, `gate`, `aim` (`yawErrDeg`, `lateralAtTarget`, `rangeError`), `hiveUp` (which CELL of each HIVE the tags say is up, or null if unseen), `timing` and `missedTagIds`. Image mode needs the detector: `await HiveControl.whenDetectorReady()` first.
 - `solve({..., useVision: true})`: aims from the vision estimate; the result's `vision` field gives the estimate and its error.
 - `getTags()`: the tag layout in use.
 

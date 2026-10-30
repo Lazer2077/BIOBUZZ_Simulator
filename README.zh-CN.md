@@ -76,7 +76,16 @@
 - **渲染图像（`camera-render.js`）：** 软件光线投射渲染 640×480、1280×720 或 1280×800 灰度图，包含地垫和接缝、围墙、标签（黑框加白边）、CELL 面板、HIVE 支架腿和横梁；640×480 用 2×2 超采样。可选效果：运动模糊（按前进速度和角速度在曝光时间内取多个子帧）、Brown–Conrady 径向畸变 `k1`（镜头成像圆外为黑）、失焦模糊、曝光增益和高斯传感器噪声。浏览器里渲染一帧约 0.4–0.9 s，所以页面在最后一次修改后 180 ms 才重新渲染；“几何 + 角点噪声”模式（M 键）不渲染，立即出结果。
 - **位姿求解（`localization.js`）：** 检测器角点先按已知标定去畸变。
   - **初值：** 标签是倾斜的，所以初值方法适用于任意朝向的标签。相机高度和俯仰已知时，给定朝向就确定了每个角点的视线，相机位置再由这些视线穿过已知角点的线性最小二乘求出。朝向按 2° 扫描后用黄金分割收窄，无噪声时精确，只有一个标签也行。
-  - **优化：** 在 `(x, y, 朝向)` 上用 Levenberg–Marquardt 最小化角点重投影误差，带 Huber 权重；看到 3 个及以上标签时，RMS 超过 4 px 的标签被剔除后重解。
+  - **优化：** 在 `(x, y, 朝向, 相机俯仰)` 上用 Levenberg–Marquardt 最小化角点重投影误差，带 Huber 权重。俯仰带 ±3° 先验，约束在标定值附近；可以关闭（“同时估计相机俯仰”），改为固定俯仰只求 `(x, y, 朝向)`。看到 3 个及以上标签时，RMS 超过 4 px 的标签被剔除后重解。
+  - **为什么要估计俯仰：** 标签挂在 0.9–1.3 m 高处，距离主要靠仰角推算。固定俯仰时，车体前后晃动或安装误差造成 1° 的相机倾斜就会让位姿偏约 6 cm，−3° 偏约 18 cm。下表是 6 个射击位置的视觉瞄准结果，“实际俯仰偏差”表示真实相机相对标定值的倾斜：
+
+    | 俯仰偏差 | 固定俯仰：进球数 / 最大位置误差 | 估计俯仰：进球数 / 最大位置误差 |
+    |---|---|---|
+    | 0° | 18/18 / 0.8 cm | 18/18 / 1.0 cm |
+    | +2° | 12/18 / 16 cm | 18/18 / 0.8 cm |
+    | −3° | 0/18 / 32 cm | 18/18 / 1.1 cm |
+
+    图像模式（真实检测器）结果一致（−3°：0/6 对 6/6）。估计俯仰也能吸收大部分相机高度误差（+3 cm：6 cm → 1.2 cm）。标定准确时几乎没有代价（RMS 0.6 → 0.7 cm）。只有一个标签时略差，但单个远处标签本来就会被质量门限拒绝。
   - **不确定度：** 1σ 来自 `s²(JᵀJ)⁻¹`；图像模式还计入每个角点 0.3 px 的系统偏差下限，多帧平均无法消除这部分。
   - **融合：** 多帧（机器人静止，每帧重新加传感器噪声）用卡尔曼滤波融合，也可输入里程计。
 - **质量门限：** 两种情况下不使用该估计：预计运动模糊 `fx·|ω|·T + fx·|v|·T/1.5` 超过 2 px；只看到 1 个标签且距离超过 1.5 m。这两种失效从重投影残差上看不出来。
@@ -86,7 +95,7 @@
 - 标签组沿 CELL 的位置是按手册图纸推算的，并已与官方 CAD 底面面板核对；沿 CELL 深度方向的位置依赖于把图 9-15 的“Front of Cell”理解为开口边。
 - 模拟器的 Y 轴与场地是镜像关系（见上文）。
 - 光照只有一个方向光，没有阴影、反光和卷帘快门。
-- 相机高度、俯仰和标定假定精确。
+- 相机高度、内参和畸变假定精确；俯仰在标定值附近估计。
 - 机器人和球不会遮挡标签。
 
 ## 控制算法接口
@@ -112,7 +121,7 @@ if (solution.status === 'hit') {
 - `solve({...})`：在给定发射点、初速和球种下寻找无碰撞的角度；无解时返回 `unreachable`。
 - `fire({...})`：执行当前参数的一次发射；命中后增加球数，并在达到阈值时推进 HIVE 到下一稳定状态。此 API 即时完成计算，界面按钮则播放动画。
 - `reset()`：恢复官方比赛初始方向和每组 3 颗 NECTAR。
-- `localize({...})`：在给定位姿（`x`、`y`，`yawDeg` 作为朝向）运行相机，返回真实与估计位姿、误差、1σ、检测到的标签 ID 和拒绝原因。也接受 `cameraHeight`、`cameraPitchDeg`、`cameraFovDeg`、`frames` 和整数 `seed`；`mode: 'image'`（渲染图像 + 真实检测器）或 `'geometry'`，几何模式用 `pixelNoise`，图像模式用 `sensorNoise`、`exposureGain`、`exposureMs`、`driveSpeed`、`turnRateDegS`、`k1`、`defocus`、`decimate`。`resolution` 可取 `'640x480'`、`'1280x720'` 或 `'1280x800'`。返回值另含 `mode`、`gate`、`aim`（`yawErrDeg`、`lateralAtTarget`、`rangeError`）、`hiveUp`（标签显示的各 HIVE 朝上 CELL，没看到为 null）、`timing` 和 `missedTagIds`。图像模式需要先 `await HiveControl.whenDetectorReady()`。
+- `localize({...})`：在给定位姿（`x`、`y`，`yawDeg` 作为朝向）运行相机，返回真实与估计位姿、误差、1σ、检测到的标签 ID 和拒绝原因。也接受 `cameraHeight`、`cameraPitchDeg`、`cameraFovDeg`、`frames` 和整数 `seed`；`mode: 'image'`（渲染图像 + 真实检测器）或 `'geometry'`，几何模式用 `pixelNoise`，图像模式用 `sensorNoise`、`exposureGain`、`exposureMs`、`driveSpeed`、`turnRateDegS`、`k1`、`defocus`、`decimate`。`resolution` 可取 `'640x480'`、`'1280x720'` 或 `'1280x800'`；`pitchErrorDeg` 让真实相机偏离标定俯仰，`estimatePitch`（默认 true）同时求解俯仰。返回值另含估计的俯仰 `pitchDeg`。返回值另含 `mode`、`gate`、`aim`（`yawErrDeg`、`lateralAtTarget`、`rangeError`）、`hiveUp`（标签显示的各 HIVE 朝上 CELL，没看到为 null）、`timing` 和 `missedTagIds`。图像模式需要先 `await HiveControl.whenDetectorReady()`。
 - `solve({..., useVision: true})`：用视觉估计瞄准，结果的 `vision` 字段给出估计值与误差。
 - `getTags()`：当前使用的标签布置。
 

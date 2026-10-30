@@ -87,15 +87,15 @@ function createDetector(Module){Module._at_init();let cache=new Map();
 // the pose; with several frames (robot static, fresh sensor noise each) the estimates are fused by the Kalman filter.
 // Corner bias from rendering and the detector's edge fit (about 0.2–0.3 px here) is common to all frames, so it is
 // added to the covariance after fusion instead of averaging away.
-function localizeFromImage({detector,robot,camera,tags=L.defaultTags(),layouts=[{tags}],polygons,cylinders,effects,detectorOptions,frames=1,maxHamming=0,minDecisionMargin=10,cornerBiasPx=.3}){
+function localizeFromImage({detector,robot,camera,solverCamera=camera,pitchPriorDeg=null,tags=L.defaultTags(),layouts=[{tags}],polygons,cylinders,effects,detectorOptions,frames=1,maxHamming=0,minDecisionMargin=10,cornerBiasPx=.3}){
  let t0=now(),frame=render({robot,camera,tags,patterns:id=>detector.pattern(id),polygons,cylinders,effects}),renderMs=now()-t0,cam=frame.camera,K=L.intrinsics(cam),known=new Set(layouts[0].tags.map(t=>t.id));
  let filter=L.createPoseFilter(),last=null,framesUsed=0,detectMs=0,bias=null,chosen=null;
  for(let k=0;k<Math.max(1,frames|0);k++){let gray=k?sensor(frame.radiance,frame.effects,frame.effects.seed+k*7919):frame.gray,t1=now(),raw=detector.detect(gray,frame.width,frame.height,detectorOptions),accepted=[],rejected=[];detectMs+=now()-t1;
   for(const d of raw){let reason=!known.has(d.id)?'unknown':d.hamming>maxHamming?'hamming':d.decisionMargin<minDecisionMargin?'margin':null;if(reason){rejected.push({id:d.id,reason,decisionMargin:d.decisionMargin,corners:d.corners});continue}
    let corners=d.corners.map(q=>undistort((q.u-K.cx)/K.fx,(q.v-K.cy)/K.fy,cam));if(corners.some(c=>!c)){rejected.push({id:d.id,reason:'margin',decisionMargin:d.decisionMargin,corners:d.corners});continue}
    accepted.push({...d,corners:corners.map(([x,y])=>({u:x*K.fx+K.cx,v:y*K.fy+K.cy})),rawCorners:d.corners})}
-  let e;if(!chosen){let best=L.estimateBest(accepted,{camera:cam,layouts,minPixelSigma:cornerBiasPx});chosen=best&&best.layout;e=best&&best.estimate}
-  else e=L.estimate(accepted,{camera:cam,tags:chosen.tags,minPixelSigma:cornerBiasPx});if(e){filter.update({...e,covariance:e.covariance.map((row,i)=>row.map((v,j)=>v-e.biasCovariance[i][j]))});framesUsed++;if(!bias)bias=e.biasCovariance}if(!k)last={gray,detections:accepted,rejected,estimate:e}}
+  let sc={...cam,...solverCamera},e;if(!chosen){let best=L.estimateBest(accepted,{camera:sc,layouts,minPixelSigma:cornerBiasPx,pitchPriorDeg});chosen=best&&best.layout;e=best&&best.estimate}
+  else e=L.estimate(accepted,{camera:sc,tags:chosen.tags,minPixelSigma:cornerBiasPx,pitchPriorDeg});if(e){filter.update({...e,covariance:e.covariance.map((row,i)=>row.map((v,j)=>v-e.biasCovariance[i][j]))});framesUsed++;if(!bias)bias=e.biasCovariance}if(!k)last={gray,detections:accepted,rejected,estimate:e}}
  let fused=filter.state,covariance=fused&&fused.covariance.map((row,i)=>row.map((v,j)=>v+bias[i][j]));
  let estimate=fused&&{...last.estimate,x:fused.x,y:fused.y,headingDeg:fused.headingDeg,covariance,std:{x:Math.sqrt(covariance[0][0]),y:Math.sqrt(covariance[1][1]),headingDeg:Math.sqrt(covariance[2][2])/DEG}};
  if(estimate&&!last.estimate)estimate={...estimate,rmsPx:NaN,tagIds:[],outlierTagIds:[]};

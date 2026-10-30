@@ -75,11 +75,13 @@ function detect({robot,camera=defaultCamera(),tags=defaultTags(),pixelNoise=.5,s
   detections.push({id:tag.id,corners:ideal.map(q=>({u:q.u+pixelNoise*random.gauss(),v:q.v+pixelNoise*random.gauss()})),ideal:ideal.map(q=>({u:q.u,v:q.v}))})}
  return {detections,rejected,camera:cam,cameraPose:pose}}
 
-function solve3(A,b){let m=A.map((row,i)=>[...row,b[i]]);
- for(let c=0;c<3;c++){let p=c;for(let r=c+1;r<3;r++)if(Math.abs(m[r][c])>Math.abs(m[p][c]))p=r;if(Math.abs(m[p][c])<1e-15)return null;[m[c],m[p]]=[m[p],m[c]];
-  for(let r=0;r<3;r++)if(r!==c){let f=m[r][c]/m[c][c];for(let k=c;k<4;k++)m[r][k]-=f*m[c][k]}}
- return m.map((row,i)=>row[3]/row[i])}
-function inverse3(A){let cols=[0,1,2].map(j=>solve3(A,[0,1,2].map(i=>i===j?1:0)));return cols.every(Boolean)?[0,1,2].map(i=>cols.map(c=>c[i])):null}
+// Gauss–Jordan with partial pivoting for the small (3×3 or 4×4) systems used here.
+function solveN(A,b){let n=b.length,m=A.map((row,i)=>[...row,b[i]]);
+ for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(m[r][c])>Math.abs(m[p][c]))p=r;if(Math.abs(m[p][c])<1e-15)return null;[m[c],m[p]]=[m[p],m[c]];
+  for(let r=0;r<n;r++)if(r!==c){let f=m[r][c]/m[c][c];for(let k=c;k<=n;k++)m[r][k]-=f*m[c][k]}}
+ return m.map((row,i)=>row[n]/row[i])}
+function inverseN(A){let n=A.length,idx=[...Array(n).keys()],cols=idx.map(j=>solveN(A,idx.map(i=>i===j?1:0)));return cols.every(Boolean)?idx.map(i=>cols.map(c=>c[i])):null}
+const inverse3=inverseN;
 
 // Initial pose for tags in any orientation. With the camera height and pitch known, fixing the heading fixes every
 // corner's viewing ray in the field, and the camera position then follows from a linear least-squares fit of those
@@ -100,37 +102,43 @@ function initialPose(obs,cam,K){let pts=[];for(const o of obs)o.corners.forEach(
  let a=best-step,b=best+step,g=(Math.sqrt(5)-1)/2;for(let k=0;k<60;k++){let c1=b-g*(b-a),c2=a+g*(b-a);if(fit(c1).cost<fit(c2).cost)b=c2;else a=c1}
  let th=(a+b)/2,f=fit(th);return Number.isFinite(f.cost)?[f.x,f.y,wrap(th)]:null}
 
-// Levenberg–Marquardt on the corner reprojection error over (x, y, heading), with Huber weights.
-function refine(obs,cam,K,start,maxIterations,huberPx){
- const residuals=s=>{let pose=cameraPose({x:s[0],y:s[1],headingDeg:s[2]/DEG},cam),r=[];
-  for(const o of obs)o.world.forEach((P,i)=>{let q=project(P,pose,K);r.push(q?o.corners[i].u-q.u:1e3,q?o.corners[i].v-q.v:1e3)});return r};
- const weights=r=>{let w=[];for(let i=0;i<r.length;i+=2){let e=Math.hypot(r[i],r[i+1]),k=e<=huberPx?1:huberPx/e;w.push(k,k)}return w};
+// Levenberg–Marquardt on the corner reprojection error over (x, y, heading), with Huber weights. With pitchPrior set,
+// the camera pitch is a fourth unknown, held to its calibrated value by a prior residual (pitch − calibrated) / σ in
+// units of one pixel, so that chassis tilt and pitch calibration error do not turn into range error.
+function refine(obs,cam,K,start,maxIterations,huberPx,pitchPrior=null){let n=pitchPrior?4:3,p0=cam.pitchDeg*DEG;
+ const residuals=s=>{let pose=cameraPose({x:s[0],y:s[1],headingDeg:s[2]/DEG},n>3?{...cam,pitchDeg:s[3]/DEG}:cam),r=[];
+  for(const o of obs)o.world.forEach((P,i)=>{let q=project(P,pose,K);r.push(q?o.corners[i].u-q.u:1e3,q?o.corners[i].v-q.v:1e3)});
+  if(n>3)r.push((s[3]-p0)/pitchPrior);return r};
+ const corners=obs.length*8,weights=r=>{let w=[];for(let i=0;i<corners;i+=2){let e=Math.hypot(r[i],r[i+1]),k=e<=huberPx?1:huberPx/e;w.push(k,k)}if(n>3)w.push(1);return w};
  const cost=(r,w)=>r.reduce((s,v,i)=>s+w[i]*v*v,0);
- const jacobian=s=>[1e-5,1e-5,1e-6].map((h,j)=>{let a=[...s],b=[...s];a[j]+=h;b[j]-=h;let ra=residuals(a),rb=residuals(b);return ra.map((v,i)=>-(v-rb[i])/(2*h))});
- let s=[...start],r=residuals(s),w=weights(r),c=cost(r,w),lambda=1e-3,it=0,done=false;
- for(;it<maxIterations&&!done;it++){let J=jacobian(s),A=[[0,0,0],[0,0,0],[0,0,0]],g=[0,0,0];
-  for(let i=0;i<r.length;i++)for(let a=0;a<3;a++){g[a]-=J[a][i]*w[i]*r[i];for(let b=0;b<3;b++)A[a][b]+=J[a][i]*w[i]*J[b][i]}
-  let improved=false;for(let tries=0;tries<8&&!improved;tries++){let step=solve3(A.map((row,i)=>row.map((v,j)=>i===j?v*(1+lambda):v)),g.map(v=>-v));if(!step)break;
-   let next=[s[0]+step[0],s[1]+step[1],wrap(s[2]+step[2])],rn=residuals(next),wn=weights(rn),cn=cost(rn,wn);
+ const jacobian=s=>[1e-5,1e-5,1e-6,1e-6].slice(0,n).map((h,j)=>{let a=[...s],b=[...s];a[j]+=h;b[j]-=h;let ra=residuals(a),rb=residuals(b);return ra.map((v,i)=>-(v-rb[i])/(2*h))});
+ const normal=(J,w)=>{let A=[...Array(n)].map(()=>Array(n).fill(0));for(let i=0;i<J[0].length;i++)for(let a=0;a<n;a++)for(let b=0;b<n;b++)A[a][b]+=J[a][i]*(w?w[i]:1)*J[b][i];return A};
+ let s=start.length<n?[...start,p0]:[...start],r=residuals(s),w=weights(r),c=cost(r,w),lambda=1e-3,it=0,done=false;
+ for(;it<maxIterations&&!done;it++){let J=jacobian(s),A=normal(J,w),g=Array(n).fill(0);
+  for(let i=0;i<r.length;i++)for(let a=0;a<n;a++)g[a]-=J[a][i]*w[i]*r[i];
+  let improved=false;for(let tries=0;tries<8&&!improved;tries++){let step=solveN(A.map((row,i)=>row.map((v,j)=>i===j?v*(1+lambda):v)),g.map(v=>-v));if(!step)break;
+   let next=s.map((v,k)=>v+step[k]);next[2]=wrap(next[2]);let rn=residuals(next),wn=weights(rn),cn=cost(rn,wn);
    if(cn<c){improved=true;let small=c-cn<1e-9*c+1e-18||Math.hypot(step[0],step[1])<1e-7&&Math.abs(step[2])<1e-7;s=next;r=rn;w=wn;c=cn;lambda=Math.max(lambda/10,1e-9);done=small}else lambda*=10}
   if(!improved)break}
- let J=jacobian(s),A=[[0,0,0],[0,0,0],[0,0,0]];for(let i=0;i<r.length;i++)for(let a=0;a<3;a++)for(let b=0;b<3;b++)A[a][b]+=J[a][i]*J[b][i];
- return {s,r,A,iterations:it}}
+ // The covariance uses the pixel residuals only; the prior enters through its own row of the Jacobian.
+ return {s,r:r.slice(0,corners),A:normal(jacobian(s)),iterations:it}}
 
-// Estimate the robot pose (x, y, heading) from detections; camera height, pitch and mount offsets are assumed known.
+// Estimate the robot pose (x, y, heading) from detections; camera height and mount offsets are assumed known, and the
+// pitch too unless pitchPriorDeg is set, in which case it is estimated around its calibrated value with that σ.
 // minPixelSigma floors the per-corner noise used for the covariance, for systematic corner bias the residual cannot show.
-function estimate(detections,{camera=defaultCamera(),tags=defaultTags(),maxIterations=30,huberPx=2,outlierPx=4,initial=null,minPixelSigma=0}={}){
+function estimate(detections,{camera=defaultCamera(),tags=defaultTags(),maxIterations=30,huberPx=2,outlierPx=4,initial=null,minPixelSigma=0,pitchPriorDeg=null}={}){
  let cam={...defaultCamera(),...camera},K=intrinsics(cam),byId=new Map(tags.map(t=>[t.id,t]));
  let obs=detections.filter(d=>byId.has(d.id)).map(d=>({id:d.id,corners:d.corners,world:tagCorners(byId.get(d.id))})),dropped=[];
  if(!obs.length)return null;
  for(;;){let start=initial?[initial.x,initial.y,initial.headingDeg*DEG]:initialPose(obs,cam,K);if(!start)return null;
-  let fit=refine(obs,cam,K,start,maxIterations,huberPx),perTag=obs.map((o,k)=>Math.sqrt(fit.r.slice(8*k,8*k+8).reduce((s,v)=>s+v*v,0)/4));
+  let fit=refine(obs,cam,K,start,maxIterations,huberPx,pitchPriorDeg>0?pitchPriorDeg*DEG:null),perTag=obs.map((o,k)=>Math.sqrt(fit.r.slice(8*k,8*k+8).reduce((s,v)=>s+v*v,0)/4));
   let worst=perTag.indexOf(Math.max(...perTag));
   if(obs.length>=3&&perTag[worst]>outlierPx){dropped.push(obs[worst].id);obs.splice(worst,1);continue}
-  let m=fit.r.length,sq=fit.r.reduce((s,v)=>s+v*v,0),cov=inverse3(fit.A),s2=Math.max(m>3?sq/(m-3):0,minPixelSigma**2);
-  let covariance=cov&&cov.map(row=>row.map(v=>v*s2));
+  let m=fit.r.length,np=fit.s.length,sq=fit.r.reduce((s,v)=>s+v*v,0),full=inverseN(fit.A),s2=Math.max(m>np?sq/(m-np):0,minPixelSigma**2);
+  let cov=full&&full.slice(0,3).map(row=>row.slice(0,3)),covariance=cov&&cov.map(row=>row.map(v=>v*s2));
   return {x:fit.s[0],y:fit.s[1],headingDeg:fit.s[2]/DEG,rmsPx:Math.sqrt(sq/m),covariance,biasCovariance:cov&&cov.map(row=>row.map(v=>v*minPixelSigma**2)),
    std:covariance?{x:Math.sqrt(Math.max(covariance[0][0],0)),y:Math.sqrt(Math.max(covariance[1][1],0)),headingDeg:Math.sqrt(Math.max(covariance[2][2],0))/DEG}:null,
+   pitchDeg:fit.s.length>3?fit.s[3]/DEG:cam.pitchDeg,pitchStdDeg:fit.s.length>3&&full?Math.sqrt(Math.max(full[3][3]*s2,0))/DEG:0,
    tagIds:obs.map(o=>o.id),outlierTagIds:dropped,iterations:fit.iterations}}}
 
 // Decides whether an estimate is trustworthy enough to act on. Motion blur over the exposure (from the gyro rate and
@@ -171,10 +179,11 @@ function estimateBest(detections,{layouts,...options}){let best=null;
 
 // Detect over several frames (independent pixel noise, robot static) and fuse the per-frame estimates. tags are where
 // the tags really are; layouts are the candidate maps the solver may use, chosen on the first frame.
-function localize({robot,camera,tags=defaultTags(),layouts=[{tags}],pixelNoise=.5,seed=1,frames=1,dropout=0,occluded=null}={}){
+// camera is the real camera (what is seen); solverCamera is the calibration the solver believes, which may differ.
+function localize({robot,camera,solverCamera=camera,pitchPriorDeg=null,tags=defaultTags(),layouts=[{tags}],pixelNoise=.5,seed=1,frames=1,dropout=0,occluded=null}={}){
  let filter=createPoseFilter(),last=null,frameEstimates=[],chosen=null;
  for(let k=0;k<Math.max(1,frames|0);k++){last=detect({robot,camera,tags,pixelNoise,seed:seed+k*7919,dropout,occluded});
-  let e;if(!chosen){let best=estimateBest(last.detections,{camera:last.camera,layouts});chosen=best&&best.layout;e=best&&best.estimate}else e=estimate(last.detections,{camera:last.camera,tags:chosen.tags});
+  let sc={...defaultCamera(),...solverCamera},e;if(!chosen){let best=estimateBest(last.detections,{camera:sc,layouts,pitchPriorDeg});chosen=best&&best.layout;e=best&&best.estimate}else e=estimate(last.detections,{camera:sc,tags:chosen.tags,pitchPriorDeg});
   frameEstimates.push(e);if(e)filter.update(e)}
  let fused=filter.state,est=fused&&{...frameEstimates.filter(Boolean).pop(),x:fused.x,y:fused.y,headingDeg:fused.headingDeg,std:fused.std,covariance:fused.covariance};
  return {estimate:est,hiveUp:chosen&&chosen.hiveUp,detections:last.detections,rejected:last.rejected,camera:last.camera,cameraPose:last.cameraPose,framesUsed:frameEstimates.filter(Boolean).length,

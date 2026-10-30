@@ -20,6 +20,8 @@ export interface ShotInput {
   frames?: number;         // frames fused per estimate
   seed?: number;           // integer noise seed
   resolution?: '640x480' | '1280x720' | '1280x800';
+  pitchErrorDeg?: number;  // real camera pitch minus its calibration (chassis tilt, mounting error)
+  estimatePitch?: boolean; // solve camera pitch with a ±3° prior around the calibration (default true)
   mode?: 'image' | 'geometry'; // rendered frame + AprilTag detector, or projected corners + noise
   sensorNoise?: number;    // image mode: Gaussian read noise, gray levels
   exposureGain?: number;
@@ -41,6 +43,7 @@ export interface QualityGate { ok: boolean; blurPx: number; reasons: ('blur' | '
 export interface Localization {
   mode: 'image' | 'geometry';
   gate: QualityGate | null;
+  pitchDeg: number | null; // estimated camera pitch
   aim: { yawErrDeg: number; lateralAtTarget: number; rangeError: number } | null; // effect of the pose error on the shot
   hiveUp: { red: -1 | 1 | null; blue: -1 | 1 | null } | null; // upward CELL side per HIVE from the best-fitting layout
   timing: { renderMs: number; detectMs: number } | null; // image mode
