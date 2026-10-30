@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 
 const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-const values = {team:'red',state:'1',x:'-0.6',y:'1.8',z:'0.55',speed:'6.5',angle:'52',yaw:'-90',diameter:'0.071',drag:'0.5',threshold:'0.30',camHeight:'0.30',camPitch:'10',camFov:'70',pixelNoise:'0.5',frames:'3'};
+const values = {team:'red',state:'1',x:'-0.6',y:'1.8',z:'0.55',speed:'6.5',angle:'52',yaw:'-90',diameter:'0.071',drag:'0.5',threshold:'0.30',camHeight:'0.30',camPitch:'10',camFov:'70',pixelNoise:'0.5',frames:'3',visionMode:'image',sensorNoise:'3',exposureGain:'1',exposureMs:'8',driveSpeed:'0',turnRate:'0',k1:'0',defocus:'0',decimate:'2'};
 const context2d = new Proxy({}, {get: () => () => {}});
 const elements = Object.fromEntries(Object.entries(values).map(([id,value]) => [id,{value,addEventListener(){}}]));
 elements.visionAim = {value:'on',checked:false,addEventListener(){}};

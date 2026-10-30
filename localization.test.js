@@ -49,4 +49,42 @@ const f = L.createPoseFilter();
 f.update({x:1, y:2, headingDeg:90, std:{x:.01,y:.01,headingDeg:.5}});
 f.predict(.1, {dx:.5});
 assert.ok(Math.abs(f.state.x-1) < 1e-9 && Math.abs(f.state.y-2.5) < 1e-9, 'forward odometry at heading 90° must move +Y');
-console.log('Localization checks passed');
+// Quality gate: blur from the gyro rate, and a lone distant tag.
+const gateCam = L.defaultCamera();
+assert.equal(L.qualityGate({x:0,y:0,headingDeg:0,tagIds:[1,2]}, {camera:gateCam, turnRateDegS:10}).ok, true);
+assert.deepEqual(L.qualityGate({x:0,y:0,headingDeg:0,tagIds:[1,2]}, {camera:gateCam, turnRateDegS:90}).reasons, ['blur']);
+assert.deepEqual(L.qualityGate({x:0,y:0,headingDeg:0,tagIds:[8]}).reasons, ['singleFarTag']);
+assert.equal(L.qualityGate({x:0,y:1.3,headingDeg:90,tagIds:[2]}).ok, true, 'a single tag 0.5 m away is trusted');
+
+// Pixel pipeline: render the camera image and run the real AprilRobotics detector compiled to WebAssembly.
+const C = require('./camera-render.js');
+require('./vendor/apriltag-wasm.js')().then(Module => {
+  const detector = C.createDetector(Module);
+  assert.equal(detector.tagCount, 587, 'the detector must carry the full tag36h11 family');
+  const p0 = detector.pattern(0);
+  assert.equal(p0.width, 10);
+  assert.ok([0,9].every(i => p0.data[i] === 255 && p0.data[i*10] === 255), 'tag images have a white outer ring');
+  assert.ok([1,8].every(i => p0.data[10+i] === 0 && p0.data[80+i] === 0), 'tag images have a black border');
+
+  const robot = {x:0, y:1.5, headingDeg:-60};
+  const clean = C.localizeFromImage({detector, robot, effects:{noise:0}});
+  assert.deepEqual(clean.detections.map(d => d.id).sort((a,b)=>a-b), [8,9,10,11], 'the detector must find the wall tags in the rendered frame');
+  const pose = L.cameraPose(robot, L.defaultCamera()), K = L.intrinsics(L.defaultCamera()), tags = L.defaultTags();
+  for (const d of clean.detections) {
+    const ideal = L.tagCorners(tags.find(t => t.id === d.id)).map(P => L.project(P, pose, K));
+    d.corners.forEach((q,i) => assert.ok(Math.hypot(q.u-ideal[i].u, q.v-ideal[i].v) < .5, `detector corner ${i} of tag ${d.id} must match the projected corner in order`));
+  }
+  assert.ok(clean.error.position < .01 && Math.abs(clean.error.headingDeg) < .2, 'pixel pipeline pose error must be under 1 cm: ' + JSON.stringify(clean.error));
+
+  const noisy = C.localizeFromImage({detector, robot, effects:{noise:4, seed:2}, frames:3});
+  assert.ok(noisy.error.position < .02, 'sensor noise must keep the error within 2 cm');
+
+  const distorted = C.localizeFromImage({detector, robot, camera:{k1:-.3}, effects:{noise:2}});
+  assert.ok(distorted.detections.length >= 3 && distorted.error.position < .02, 'undistorting the corners with the known k1 must keep the pose accurate');
+  const [xd, yd] = C.distort(.3, -.2, {k1:-.3, k2:.05}), [xu, yu] = C.undistort(xd, yd, {k1:-.3, k2:.05});
+  assert.ok(Math.hypot(xu-.3, yu+.2) < 1e-9, 'undistort must invert distort');
+
+  const blurred = C.localizeFromImage({detector, robot, effects:{turnRateDegS:150}});
+  assert.equal(blurred.detections.length, 0, 'a 150°/s turn over an 8 ms exposure smears the tags beyond decoding');
+  console.log('Localization checks passed (including the AprilTag image pipeline)');
+});

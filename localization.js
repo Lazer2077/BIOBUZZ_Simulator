@@ -87,7 +87,8 @@ function refine(obs,cam,K,start,maxIterations,huberPx){
  return {s,r,A,iterations:it}}
 
 // Estimate the robot pose (x, y, heading) from detections; camera height, pitch and mount offsets are assumed known.
-function estimate(detections,{camera=defaultCamera(),tags=defaultTags(),maxIterations=30,huberPx=2,outlierPx=4,initial=null}={}){
+// minPixelSigma floors the per-corner noise used for the covariance, for systematic corner bias the residual cannot show.
+function estimate(detections,{camera=defaultCamera(),tags=defaultTags(),maxIterations=30,huberPx=2,outlierPx=4,initial=null,minPixelSigma=0}={}){
  let cam={...defaultCamera(),...camera},K=intrinsics(cam),byId=new Map(tags.map(t=>[t.id,t]));
  let obs=detections.filter(d=>byId.has(d.id)).map(d=>({id:d.id,corners:d.corners,world:tagCorners(byId.get(d.id))})),dropped=[];
  if(!obs.length)return null;
@@ -95,11 +96,20 @@ function estimate(detections,{camera=defaultCamera(),tags=defaultTags(),maxItera
   let fit=refine(obs,cam,K,start,maxIterations,huberPx),perTag=obs.map((o,k)=>Math.sqrt(fit.r.slice(8*k,8*k+8).reduce((s,v)=>s+v*v,0)/4));
   let worst=perTag.indexOf(Math.max(...perTag));
   if(obs.length>=3&&perTag[worst]>outlierPx){dropped.push(obs[worst].id);obs.splice(worst,1);continue}
-  let m=fit.r.length,sq=fit.r.reduce((s,v)=>s+v*v,0),cov=inverse3(fit.A),s2=m>3?sq/(m-3):0;
+  let m=fit.r.length,sq=fit.r.reduce((s,v)=>s+v*v,0),cov=inverse3(fit.A),s2=Math.max(m>3?sq/(m-3):0,minPixelSigma**2);
   let covariance=cov&&cov.map(row=>row.map(v=>v*s2));
-  return {x:fit.s[0],y:fit.s[1],headingDeg:fit.s[2]/DEG,rmsPx:Math.sqrt(sq/m),covariance,
+  return {x:fit.s[0],y:fit.s[1],headingDeg:fit.s[2]/DEG,rmsPx:Math.sqrt(sq/m),covariance,biasCovariance:cov&&cov.map(row=>row.map(v=>v*minPixelSigma**2)),
    std:covariance?{x:Math.sqrt(Math.max(covariance[0][0],0)),y:Math.sqrt(Math.max(covariance[1][1],0)),headingDeg:Math.sqrt(Math.max(covariance[2][2],0))/DEG}:null,
    tagIds:obs.map(o=>o.id),outlierTagIds:dropped,iterations:fit.iterations}}}
+
+// Decides whether an estimate is trustworthy enough to act on. Motion blur over the exposure (from the gyro rate and
+// drive speed) biases the corners in a way the reprojection residual does not reveal, and a single distant tag gives a
+// weakly constrained pose, so both are rejected rather than fused.
+function qualityGate(est,{camera=defaultCamera(),tags=defaultTags(),turnRateDegS=0,speed=0,exposureMs=8,maxBlurPx=2,singleTagMaxRange=1.5}={}){
+ if(!est)return {ok:false,blurPx:0,reasons:['none']};let cam={...defaultCamera(),...camera},K=intrinsics(cam),T=exposureMs/1000,reasons=[];
+ let blurPx=K.fx*Math.abs(turnRateDegS)*DEG*T+K.fx*Math.abs(speed)*T/1.5;if(blurPx>maxBlurPx)reasons.push('blur');
+ if(est.tagIds.length<2){let tag=tags.find(t=>t.id===est.tagIds[0]),range=tag?Math.hypot(tag.x-est.x,tag.y-est.y):Infinity;if(range>singleTagMaxRange)reasons.push('singleFarTag')}
+ return {ok:!reasons.length,blurPx,reasons}}
 
 // Kalman filter on (x, y, heading) fusing vision estimates with optional robot-frame odometry.
 function createPoseFilter({processStd={xy:.02,headingDeg:1},measurementFloor={xy:.002,headingDeg:.1}}={}){
@@ -127,6 +137,6 @@ function localize({robot,camera,tags=defaultTags(),pixelNoise=.5,seed=1,frames=1
  return {estimate:est,detections:last.detections,rejected:last.rejected,camera:last.camera,cameraPose:last.cameraPose,framesUsed:frameEstimates.filter(Boolean).length,
   error:est?{x:est.x-robot.x,y:est.y-robot.y,position:Math.hypot(est.x-robot.x,est.y-robot.y),headingDeg:wrap((est.headingDeg-robot.headingDeg)*DEG)/DEG}:null}}
 
-const api={TAG_SIZE,defaultCamera,defaultTags,intrinsics,tagCorners,cameraPose,project,toCamera,detect,estimate,localize,createPoseFilter};
+const api={TAG_SIZE,defaultCamera,defaultTags,intrinsics,tagCorners,cameraPose,project,toCamera,detect,estimate,localize,createPoseFilter,qualityGate};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FiducialLocalizer=api;
 })(typeof window!=='undefined'?window:globalThis);

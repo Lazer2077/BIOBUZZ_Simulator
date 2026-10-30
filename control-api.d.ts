@@ -19,21 +19,35 @@ export interface ShotInput {
   pixelNoise?: number;     // corner noise σ, px
   frames?: number;         // frames fused per estimate
   seed?: number;           // integer noise seed
+  mode?: 'image' | 'geometry'; // rendered frame + AprilTag detector, or projected corners + noise
+  sensorNoise?: number;    // image mode: Gaussian read noise, gray levels
+  exposureGain?: number;
+  exposureMs?: number;
+  driveSpeed?: number;     // m/s forward during the exposure (motion blur)
+  turnRateDegS?: number;   // °/s during the exposure (motion blur)
+  k1?: number;             // radial distortion; corners are undistorted with this known value
+  defocus?: number;        // Gaussian blur σ, px
+  decimate?: number;       // detector quad_decimate
 }
 
 export type TagRejection = 'behind' | 'range' | 'angle' | 'fov' | 'small' | 'occluded' | 'dropout';
 export interface Pose2D { x: number; y: number; headingDeg: number }
 export interface FieldTag { id: number; x: number; y: number; z: number; yawDeg: number; size: number }
+export interface QualityGate { ok: boolean; blurPx: number; reasons: ('blur' | 'singleFarTag' | 'none')[] }
 export interface Localization {
+  mode: 'image' | 'geometry';
+  gate: QualityGate | null;
+  timing: { renderMs: number; detectMs: number } | null; // image mode
+  missedTagIds: number[];  // image mode: in view geometrically but not detected
   truth: Pose2D;
   estimate: (Pose2D & { std: { x: number; y: number; headingDeg: number } | null; rmsPx: number; outlierTagIds: number[] }) | null;
   error: { x: number; y: number; position: number; headingDeg: number } | null;
   detectedTagIds: number[];
-  rejected: { id: number; reason: TagRejection }[];
+  rejected: { id: number; reason: TagRejection | 'hamming' | 'margin' | 'unknown' }[]; // image mode lists discarded decodes
   framesUsed: number;
   detections: { id: number; corners: { u: number; v: number }[]; ideal: { u: number; v: number }[] }[];
 }
-export interface VisionAim { ok: boolean; estimate: Pose2D | null; error: Localization['error'] }
+export interface VisionAim { ok: boolean; estimate: Pose2D | null; error: Localization['error']; rejectedBecause: QualityGate['reasons'] }
 
 export interface HiveState {
   up: -1 | 1;              // side of upward CELL on field Y axis
@@ -78,6 +92,7 @@ export interface HiveControlAPI {
     { status: 'unreachable'; team: 'red' | 'blue'; cellSide: -1 | 1; target: Vec3; vision: VisionAim | null };
   localize(input?: ShotInput): Localization | null;
   getTags(): FieldTag[];
+  whenDetectorReady(): Promise<boolean>;
   fire(input?: ShotInput): { shot: Prediction; tipped: boolean; state: FieldState };
   reset(): FieldState;
 }

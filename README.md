@@ -24,6 +24,7 @@ Keys work when no input box has focus (click the 3D view or blank space first). 
 | C | Reset view | — |
 | V | Toggle vision aim | — |
 | N | Resample camera noise | — |
+| M | Toggle detection mode (image / geometry) | — |
 
 ## Model dimensions
 
@@ -45,16 +46,32 @@ At the start of an official match each upward CELL holds 3 NECTAR, placed agains
 
 ## Camera / AprilTag localization
 
-`localization.js` simulates a robot camera that sees fiducial tags on the field walls and estimates the robot pose `(x, y, heading)` from them. The page loads it as `window.FiducialLocalizer`; in Node it is a CommonJS module. It does not depend on the rest of the simulator.
+The simulator localizes the robot from a camera that sees AprilTags on the field walls. The pipeline matches what runs on an FTC robot: an image goes through the AprilTag detector, the detector's corners go into a pose solver, and the result is checked before it is used.
 
-- **Tag layout (placeholder):** three 6.5 in tags on each perimeter wall at x or y = −1.2, 0 and 1.2 m, centred 0.2 m above the tiles, facing into the field, IDs 1–12. The BIOBUZZ tag positions and size were not available when this was written, so edit `defaultTags` and `TAG_SIZE` to match the official field drawings. The tag pattern drawn on the page is illustrative, not a real AprilTag code.
-- **Camera:** pinhole model, 640×480, no lens distortion, mounted on the launcher, so the robot heading equals the yaw input. Height, pitch and horizontal FOV are set in the page. The detector rejects a tag that is behind the camera, beyond 4.5 m, viewed more than 75° off its normal, partly outside the image, under 10 px on a side, or occluded (sight line through a HIVE frame leg or a CELL). It then adds Gaussian noise σ to each corner pixel.
-- **Initial pose (closed form):** the two vertical edges of each tag have a known length, so the elevation difference between the rays to their ends gives each edge's horizontal range, independent of camera height. These edge points are registered to their field positions with a 2D Procrustes fit.
-- **Refinement:** Levenberg–Marquardt over `(x, y, heading)` on the reprojection error of all corners of all tags, with Huber weights. When at least 3 tags are seen, a tag with reprojection RMS over 4 px is dropped as an outlier and the solve repeats. The 1σ comes from `s²(JᵀJ)⁻¹`; over many noise samples the normalized error RMS is about 1, so the reported uncertainty matches the actual error.
-- **Multi-frame fusion:** a 3-state Kalman filter (`createPoseFilter`) fuses frames using each frame's full covariance and can also take robot-frame odometry through `predict`.
-- **Vision aim:** with "Aim using the vision pose estimate" ticked (key V), *Solve angle* runs the search at the estimated position. The robot turns by (field yaw − estimated heading), so the heading error also reaches the true launch yaw. The shot is still simulated from the true position, which shows how localization error affects scoring.
+```
+render camera frame ─► AprilRobotics detector ─► filter decodes ─► undistort corners ─► closed-form initial pose
+ (camera-render.js)     (vendor/apriltag-wasm.js)   (hamming, margin)   (known k1)           (edge ranges + 2D Procrustes)
+                                                                                                   │
+ vision aim ◄─ quality gate (blur, lone far tag) ◄─ multi-frame Kalman fusion ◄─ LM on corner reprojection error, outlier tags removed
+```
 
-Camera height, pitch and tag positions are assumed known exactly; calibrate them on the robot. The model does not include motion blur, rolling shutter, lighting, lens distortion or false detections.
+| Static, mid-field: 4 tags, error 0.2 cm | Near the HIVE: the frame and CELLs are in view | Legs occlude tag 9; tag 4 too oblique |
+|---|---|---|
+| ![](docs/images/camera-static.png) | ![](docs/images/camera-hive.png) | ![](docs/images/camera-occlusion.png) |
+| **Turning at 60°/s: 3.8 px of blur, 2 tags lost, rejected by the gate** | **80° lens with k1 = −0.25: undistorted with the calibration, error 0.2 cm** | **Exposure ×0.3 and noise σ = 8: still decodes, error 1.4 cm** |
+| ![](docs/images/camera-turn60.png) | ![](docs/images/camera-wide-distortion.png) | ![](docs/images/camera-dark-noisy.png) |
+
+Green: accepted detections (raw corners; m is the decision margin). Orange: discarded decodes. Red dashed: in view geometrically but missed by the detector.
+
+- **Detector:** the [AprilRobotics apriltag](https://github.com/AprilRobotics/apriltag) C library, the library under the FTC SDK AprilTagProcessor, compiled to WebAssembly with family tag36h11, `quad_decimate` 2 (settable), `refine_edges` on and one thread. The page and the 3D view use the library's own tag36h11 images. `tools/apriltag-wasm/build.sh` rebuilds `vendor/apriltag-wasm.js` (one 184 KB file; license in `vendor/APRILTAG-LICENSE.txt`). Decodes with hamming > 0, decision margin < 10 or an ID outside the layout are discarded.
+- **Rendered frame (`camera-render.js`):** a software ray caster renders a 640×480 grayscale image of the tiles and seams, perimeter walls, tags (6.5 in black square plus the white ring), the CELL panels and the HIVE frame legs and crossbar, with 2×2 supersampling. Optional effects: motion blur (sub-frames over the exposure from the forward speed and turn rate), Brown–Conrady radial distortion `k1` (outside the lens image circle stays black), defocus blur, exposure gain and Gaussian sensor noise. A frame renders in about 0.4–0.9 s in the browser, so the page re-renders 180 ms after the last change; "Geometry + corner noise" mode (key M) skips rendering and is instant.
+- **Pose solver (`localization.js`):** detector corners are undistorted with the known calibration. The closed-form initial pose uses each tag's vertical edges: the elevation difference between the rays to an edge's two ends gives its horizontal range without needing the camera height, and the edge points are registered to their field positions with a 2D Procrustes fit. Levenberg–Marquardt then minimizes the corner reprojection error over `(x, y, heading)` with Huber weights; with 3 or more tags, a tag whose RMS exceeds 4 px is removed and the solve repeats. The 1σ comes from `s²(JᵀJ)⁻¹`; in image mode it also includes a 0.3 px per-corner bias floor that frame averaging does not remove, and across test poses the actual error stays within about 1σ. Several frames (fresh sensor noise each, robot static) are fused with a Kalman filter that also takes odometry.
+- **Quality gate:** an estimate is not used when the expected motion blur `fx·|ω|·T + fx·|v|·T/1.5` exceeds 2 px, or when only one tag farther than 1.5 m is seen. Both are failure modes the residual does not reveal: in testing, a single blurred tag 3.6 m away gave errors near 50 cm while reporting a 1σ of about 16 cm.
+- **Vision aim:** with "Aim using the vision pose estimate" ticked (key V), *Solve angle* uses an estimate only if it passes the gate. The search runs at the estimated position, the robot turns by (field yaw − estimated heading), and the shot is simulated from the true position.
+
+Typical results with the default 640×480, 70° camera at 0.30 m: static 0.1–1.4 cm and under 0.2°; at 120°/s or faster within an 8 ms exposure no tag decodes.
+
+Limits: tag positions and size are placeholders (edit `defaultTags` and `TAG_SIZE` in `localization.js` to match the official field). Lighting is a single directional light with no shadows, glare or rolling shutter. Camera height, pitch and calibration are assumed exact. Robots and balls do not occlude the tags.
 
 ## Control API
 
@@ -79,13 +96,13 @@ Methods:
 - `solve({...})`: searches for a collision-free angle for the given launch point, speed and ball type; returns `unreachable` if none exists.
 - `fire({...})`: performs one launch with the current parameters; a hit adds the ball, and the HIVE advances to its next stable pose once the threshold is reached. The API computes this instantly; the page button animates it.
 - `reset()`: restores the official starting orientation with 3 NECTAR per HIVE.
-- `localize({...})`: runs the camera at the given pose (`x`, `y`, `yawDeg` as the heading) and returns the true and estimated pose, the error, 1σ, the detected tag IDs and the rejection reasons. It also accepts `cameraHeight`, `cameraPitchDeg`, `cameraFovDeg`, `pixelNoise`, `frames` and an integer `seed`.
+- `localize({...})`: runs the camera at the given pose (`x`, `y`, `yawDeg` as the heading) and returns the true and estimated pose, the error, 1σ, the detected tag IDs and the rejection reasons. It also accepts `cameraHeight`, `cameraPitchDeg`, `cameraFovDeg`, `frames` and an integer `seed`; `mode: 'image'` (rendered frame and real detector) or `'geometry'`, with `pixelNoise` for geometry and `sensorNoise`, `exposureGain`, `exposureMs`, `driveSpeed`, `turnRateDegS`, `k1`, `defocus`, `decimate` for image mode. The result adds `mode`, `gate`, `timing` and `missedTagIds`. Image mode needs the detector: `await HiveControl.whenDetectorReady()` first.
 - `solve({..., useVision: true})`: aims from the vision estimate; the result's `vision` field gives the estimate and its error.
 - `getTags()`: the tag layout in use.
 
 Collision `kind` values returned by the API (`封闭背板` closed back panel, `侧面` side panel, `开口边框` opening rim, `内壁 n` inner wall n) are fixed identifiers and do not change with the page language.
 
-Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API, vision aiming, the Chinese and English page text and the keyboard controls. Run `node localization.test.js` to check exact pose recovery without noise, covariance calibration, multi-frame fusion, outlier rejection and the detector's rejection reasons.
+Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API, vision aiming, the Chinese and English page text and the keyboard controls. Run `node localization.test.js` to check exact pose recovery without noise, covariance calibration, multi-frame fusion, outlier rejection, the quality gate, the detector's rejection reasons and the image pipeline: the real detector on rendered frames, corner order, distortion and motion blur.
 
 ## Check against official sources (2026-27 Competition Manual TU02)
 
