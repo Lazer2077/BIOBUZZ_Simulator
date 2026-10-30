@@ -57,22 +57,22 @@ render camera frame ─► AprilRobotics detector ─► filter decodes ─► u
 
 ### Tag layout (Competition Manual TU07 §9.9)
 
-- Sixteen 3.25 in (8.25 cm) tag36h11 tags, in four AprilTag Clusters of four on one sticker each. Each cluster is on the **bottom face of a CELL** (the outside of its back panel), facing out of the CELL, with the sticker's bottom edge toward the field centre (Figure 9-16).
-- Within a cluster the tag centres are ±2.75 in and ±6.5 in from the cluster centre (Figure 9-15). The reference holes are 9.938 in from the CELL's front edge and the tag centreline 2.75 in above them, which puts the tags 0.19 in from the panel middle.
+- Sixteen 3.25 in (8.25 cm) tag36h11 tags, in four AprilTag Clusters of four on one sticker each. Each cluster is on the **bottom face of a CELL**: the 20 × 12 in clear panel along the opening's flat lower edge. When the CELL is up, this panel faces down toward the TILES. The sticker's bottom edge points toward the field centre, i.e. toward the CELL's back (Figure 9-16). In the official CAD the panel sits 1.1 cm inside the rim; the tags are on its outer face, and every tag corner lies within 1.2 mm of the CAD panel.
+- Within a cluster the tag centres are ±2.75 in and ±6.5 in from the cluster centre along X (Figure 9-15). The reference holes are 9.938 in from the CELL front (the opening edge), and the tag centreline is 2.75 in nearer the front: 7.19 in into the CELL.
 - IDs (Figure 9-17): red CELL away from the audience 30–33, red audience CELL 34–37, blue audience CELL 38–41, blue CELL away from the audience 42–45.
-- The tags **tip with their HIVE**. An upward CELL's cluster faces down and toward the centre. The downward CELL's cluster faces outward and slightly up. A robot shooting into an upward CELL therefore sees the clusters on the other CELL of each HIVE: from the +Y side, 30–33 and 42–45 at the start.
+- The tags **tip with their HIVE**. The cluster under an upward CELL faces down and out toward that CELL's shooters, so a robot aiming at a HIVE sees that HIVE's two clusters. At the start, from the +Y side, it sees 34–37 under the target CELL and 30–33 under red's lower CELL.
 - Since the tag positions depend on how each HIVE is tipped, the solver fits all four HIVE-pose combinations and keeps the one that explains the corners best. It also reports which CELLs are up; a HIVE with no tag in view stays unknown.
 - The simulator's +Y is the audience side. In Figure 9-17 the starting NECTAR, which sit in the upward CELLs, are in the red audience CELL and the blue CELL away from the audience; here those are red +Y and blue −Y. The simulator frame is therefore a mirror image of the field in Y. Tag IDs follow the figure's left-to-right order along X, and each tag is drawn readable from in front.
 
-| Red shot, 640×480, decimate 1: tags 30 and 45, aim error 0.12° | Same, 1280×800, decimate 2: 30–33 and 45, aim error 0.09° | 640×480 with decimate 2: only tag 45, rejected by the gate |
+| Red shot, 640×480, decimate 1: 7 tags, error 0.1 cm, aim error 0.002° | Same, 1280×800, decimate 2: 4 tags (the upper cluster leaves the narrower vertical view) | 640×480 with decimate 2: only the nearer cluster 34–37, still 0.1 cm |
 |---|---|---|
 | ![](docs/images/camera-red-shot.png) | ![](docs/images/camera-red-shot-1280.png) | ![](docs/images/camera-red-shot-decimate2.png) |
-| **Blue shot: 37, 38, 41, error 0.4 cm** | **After the red HIVE tips: shooting from −Y, red −Y up detected, aim error 0.001°** | **Turning at 60°/s: one tag left, 10 cm error, rejected by the gate** |
+| **Blue shot: 39–45, error 0.1 cm** | **After the red HIVE tips: shooting from −Y, red −Y up detected, aim error 0.01°** | **Turning at 60°/s: the far cluster is lost; 3.8 px of blur, rejected by the gate** |
 | ![](docs/images/camera-blue-shot.png) | ![](docs/images/camera-after-tip.png) | ![](docs/images/camera-turn60.png) |
 
 Green: accepted detections (raw corners; m is the decision margin). Orange: discarded decodes. Red dashed: in view geometrically but missed by the detector.
 
-**The tags are small.** At 2 m a 3.25 in tag spans about 15–20 px in a 640×480, 70° image, and it is seen at a steep angle. With the detector's `quad_decimate` 2, almost none decode at 640×480. Use `decimate` 1 (the page default; detection takes about 45 ms in WASM) or a 1280×720/800 camera with decimate 2.
+**The tags are small.** From a shooting position 1.5–2 m away a 3.25 in tag spans about 20–30 px in a 640×480, 70° image. With the detector's `quad_decimate` 2 only the nearer cluster decodes. `decimate` 1 (the page default; detection takes about 45 ms in WASM) also gets the farther cluster. At 1280×800 the vertical field of view is narrower, so tilt the camera up to keep both clusters in frame.
 
 - **Detector:** the [AprilRobotics apriltag](https://github.com/AprilRobotics/apriltag) C library, the library under the FTC SDK AprilTagProcessor, compiled to WebAssembly with family tag36h11, `quad_decimate` settable (default 1 here), `refine_edges` on and one thread. The page and the 3D view use the library's own tag36h11 images. `tools/apriltag-wasm/build.sh` rebuilds `vendor/apriltag-wasm.js` (one 184 KB file; license in `vendor/APRILTAG-LICENSE.txt`). Decodes with hamming > 0, decision margin < 10 or an ID outside 30–45 are discarded.
 - **Rendered frame (`camera-render.js`):** a software ray caster renders a 640×480, 1280×720 or 1280×800 grayscale image of the tiles and seams, the perimeter walls, the tags (black square plus the white ring), the CELL panels and the HIVE frame legs and crossbar. 640×480 uses 2×2 supersampling. Optional effects: motion blur (sub-frames over the exposure from the forward speed and turn rate), Brown–Conrady radial distortion `k1` (outside the lens image circle stays black), defocus blur, exposure gain and Gaussian sensor noise. A frame renders in about 0.4–0.9 s in the browser, so the page re-renders 180 ms after the last change. "Geometry + corner noise" mode (key M) skips rendering and is instant.
@@ -85,7 +85,7 @@ Green: accepted detections (raw corners; m is the decision margin). Orange: disc
 - **Vision aim:** tick "Aim using the vision pose estimate" (key V). *Solve angle* then uses an estimate only if it passes the gate. The search runs at the estimated position, the robot turns by (field yaw − estimated heading), and the shot is simulated from the true position. The result panel reports the **aim error**: the launch-direction error, the sideways miss it causes at the target, and the range error.
 
 Limits:
-- The cluster's position along the CELL is derived from the manual's figures, against this simulator's proxy back panel rather than the CAD skin.
+- The cluster's position along the CELL is derived from the manual's figures, and checked against the official CAD bottom panel; the depth along the CELL relies on reading "Front of Cell" in Figure 9-15 as the opening edge.
 - The simulator's Y axis is mirrored relative to the field (see above).
 - Lighting is a single directional light with no shadows, glare or rolling shutter.
 - Camera height, pitch and calibration are assumed exact.

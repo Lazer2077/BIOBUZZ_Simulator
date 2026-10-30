@@ -15,14 +15,15 @@ function defaultCamera(){return {imageWidth:640,imageHeight:480,hfovDeg:70,mount
 function intrinsics(cam){let fx=cam.imageWidth/2/Math.tan(cam.hfovDeg*DEG/2);return {fx,fy:fx,cx:cam.imageWidth/2,cy:cam.imageHeight/2}}
 
 // Official layout (Competition Manual TU07 §9.9, Figures 9-15 to 9-17): each CELL carries one AprilTag Cluster of
-// four tags on its bottom face (the outside of the back panel), facing away from the opening, with the sticker's
-// bottom edge toward the field centre. Tag centres sit ±2.75 in and ±6.5 in from the cluster centre along X, and
-// 0.188 in from the back panel's middle toward its front (flat) edge: the reference holes are 9.938 in from the front
-// edge and the tag centreline is 2.75 in above them.
+// four tags on its bottom face, the 20 × 12 in clear panel along the opening's flat lower edge, facing down toward the
+// TILES when the CELL is up, with the sticker's bottom edge toward the field centre (toward the CELL's back).
+// Tag centres sit ±2.75 in and ±6.5 in from the cluster centre along X. The reference holes are 9.938 in from the
+// CELL front (the opening edge) and the tag centreline is 2.75 in nearer the front, so 7.188 in from the opening.
+// In the official CAD the clear bottom panel sits 1.1 cm inside the rim; the sticker is on its outer face.
 // The simulator's +Y is the audience side: in Figure 9-17 the starting NECTAR (upward CELLs) are in the red audience
 // CELL and the blue far CELL, which here are red +Y and blue −Y. That makes the simulator frame a mirror image of the
 // field in Y, so the IDs follow Figure 9-17's left-to-right order along X, and each tag is drawn readable from below.
-const HIVE_OFFSET=25.5*IN/2,CELL_OFFSET=.4075,PIVOT_Z=43.95*IN,OPENING_Z=1.5003,CELL_PITCH=Math.PI/3,CELL_DEPTH=12*IN,CLUSTER_V=-.188*IN;
+const HIVE_OFFSET=25.5*IN/2,CELL_OFFSET=.4075,PIVOT_Z=43.95*IN,OPENING_Z=1.5003,CELL_PITCH=Math.PI/3,CELL_H=14*IN,TAG_DEPTH=7.188*IN,BOTTOM_INSET=.011,STICKER_STANDOFF=.001;
 const CLUSTER_IDS={red:{'-1':[33,32,31,30],'1':[34,35,36,37]},blue:{'-1':[45,44,43,42],'1':[38,39,40,41]}},CLUSTER_X=[-6.5,-2.75,2.75,6.5].map(v=>v*IN);
 // A CELL's frame in its current pose, as index.html's cellGeometry/restCellGeometry: origin at the opening centre,
 // normal out of the opening, tangent along the opening from the flat edge toward the apex.
@@ -31,8 +32,10 @@ function cellFrame(name,s,up){let x=name==='red'?-HIVE_OFFSET:HIVE_OFFSET,o={x,y
  return {origin:{x,y:o.y*co+v*si,z:PIVOT_Z+v*co-o.y*si},normal:dir(n),tangent:dir(t)}}
 // All 16 tags for given upward sides ({red: ±1, blue: ±1}); the official start is red +1, blue −1.
 function defaultTags(hiveUp={red:1,blue:-1}){let tags=[];
- for(const name of ['red','blue'])for(const s of [-1,1]){let f=cellFrame(name,s,hiveUp[name]),c={x:f.origin.x,y:f.origin.y+f.tangent.y*CLUSTER_V-f.normal.y*(CELL_DEPTH+.002),z:f.origin.z+f.tangent.z*CLUSTER_V-f.normal.z*(CELL_DEPTH+.002)};
-  let normal={x:-f.normal.x,y:-f.normal.y,z:-f.normal.z},up={x:-f.tangent.x,y:-f.tangent.y,z:-f.tangent.z};
+ for(const name of ['red','blue'])for(const s of [-1,1]){let f=cellFrame(name,s,hiveUp[name]),along=-CELL_H/2+BOTTOM_INSET-STICKER_STANDOFF;
+  // From the opening centre: down to the flat edge (and back up by the panel inset), then into the CELL to the tag centreline.
+  let c={x:f.origin.x,y:f.origin.y+f.tangent.y*along-f.normal.y*TAG_DEPTH,z:f.origin.z+f.tangent.z*along-f.normal.z*TAG_DEPTH};
+  let normal={x:-f.tangent.x,y:-f.tangent.y,z:-f.tangent.z},up={...f.normal};
   CLUSTER_IDS[name][s].forEach((id,k)=>tags.push({id,hive:name,side:s,cluster:`${name}${s>0?'+':'-'}`,x:c.x+CLUSTER_X[k],y:c.y,z:c.z,normal,up,size:TAG_SIZE}))}
  return tags.sort((a,b)=>a.id-b.id)}
 // The four combinations of HIVE poses, for when the robot must tell from the tags which way each HIVE is tipped.
@@ -177,6 +180,6 @@ function localize({robot,camera,tags=defaultTags(),layouts=[{tags}],pixelNoise=.
  return {estimate:est,hiveUp:chosen&&chosen.hiveUp,detections:last.detections,rejected:last.rejected,camera:last.camera,cameraPose:last.cameraPose,framesUsed:frameEstimates.filter(Boolean).length,
   error:est?{x:est.x-robot.x,y:est.y-robot.y,position:Math.hypot(est.x-robot.x,est.y-robot.y),headingDeg:wrap((est.headingDeg-robot.headingDeg)*DEG)/DEG}:null}}
 
-const api={TAG_SIZE,defaultCamera,defaultTags,hiveLayouts,cellFrame,tagFrame,estimateBest,intrinsics,tagCorners,cameraPose,project,toCamera,detect,estimate,localize,createPoseFilter,qualityGate};
+const api={TAG_SIZE,BOTTOM_INSET,defaultCamera,defaultTags,hiveLayouts,cellFrame,tagFrame,estimateBest,intrinsics,tagCorners,cameraPose,project,toCamera,detect,estimate,localize,createPoseFilter,qualityGate};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FiducialLocalizer=api;
 })(typeof window!=='undefined'?window:globalThis);

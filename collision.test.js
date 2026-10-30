@@ -114,13 +114,15 @@ api.reset();
 const seen=api.localize({x:-0.6,y:1.8,yawDeg:-78.7,pixelNoise:0,frames:1});
 assert.ok(seen.detectedTagIds.length>=4,'a shooting pose must see a CELL tag cluster');
 assert.ok(seen.error.position<1e-6&&Math.abs(seen.aim.yawErrDeg)<1e-6,'page localization without noise must be exact');
-assert.deepEqual({...seen.hiveUp},{red:1,blue:-1},'the tags must reveal the starting HIVE poses');
+assert.deepEqual({...seen.hiveUp},{red:1,blue:null},'the red clusters in view must reveal the red HIVE pose; blue is not seen');
 const tags=api.getTags();
 assert.deepEqual([...tags.map(t=>t.id)],Array.from({length:16},(_,k)=>30+k),'Manual §9.9: tag IDs 30–45, four per CELL');
 assert.ok(tags.every(t=>Math.abs(t.size-3.25*.0254)<1e-9),'tags are 3.25 in');
-// Every tag lies on the outside of its CELL's back panel (the CELL bottom), facing away from the opening.
-const onBottom=vm.runInContext(`(()=>currentTags().map(t=>{let g=currentCellGeometry(t.hive,t.side),b=g.back[0],d=dot(sub(t,b),g.normal);return {d,facing:dot(t.normal,g.normal)}}))()`,sandbox);
-assert.ok(onBottom.every(o=>o.d<0&&o.d>-.005&&o.facing<-.999),'tags must sit on the CELL bottom face, facing out of it: '+JSON.stringify(onBottom.slice(0,4)));
+// Every tag lies on the CELL's bottom face (the panel along the opening's flat edge, 1.1 cm inside the rim as in the
+// official CAD), facing out of the CELL, between the opening and the back.
+const onBottom=vm.runInContext(`(()=>currentTags().map(t=>{let g=currentCellGeometry(t.hive,t.side),edge=g.aperture[0],out={x:-g.tangent.x,y:-g.tangent.y,z:-g.tangent.z};
+  return {d:dot(sub(t,edge),out),depth:-dot(sub(t,edge),g.normal),facing:dot(t.normal,out)}}))()`,sandbox);
+assert.ok(onBottom.every(o=>o.d<-.009&&o.d>-.011&&Math.abs(o.depth-7.188*.0254)<1e-6&&o.facing>.999),'tags must sit on the CELL bottom face, facing out of it: '+JSON.stringify(onBottom.slice(0,4)));
 const legBlocked=vm.runInContext('sightBlocked({x:-1.2,y:.362,z:.3},{x:1.2,y:.362,z:.3})',sandbox)&&!vm.runInContext('sightBlocked({x:-1.2,y:1.2,z:.3},{x:1.2,y:1.2,z:.3})',sandbox);
 assert.equal(legBlocked,true,'a sight line through a HIVE frame leg must be occluded, and a clear one must not');
 const visionShot=api.solve({x:-0.6,y:1.8,z:0.55,yawDeg:-78.7,speed:6.5,ballType:'pollen',useVision:true,pixelNoise:0.5,frames:3,seed:4});

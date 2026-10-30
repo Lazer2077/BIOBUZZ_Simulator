@@ -294,9 +294,11 @@ function visionCamera(){let [w,h]=(el.camRes?.value||'640x480').split('x').map(N
 function aimError(e){if(!e)return null;let t=target(),r=robotPose(),deg=180/Math.PI,trueBearing=Math.atan2(t.y-r.y,t.x-r.x)*deg,estBearing=Math.atan2(t.y-e.y,t.x-e.x)*deg;
  let yawErrDeg=wrapDeg(r.headingDeg+estBearing-e.headingDeg-trueBearing),range=Math.hypot(t.x-r.x,t.y-r.y);return {yawErrDeg,rangeError:Math.hypot(t.x-e.x,t.y-e.y)-range,lateralAtTarget:range*Math.sin(yawErrDeg/deg)}}
 function imageEffects(){return {supersample:visionCamera().imageWidth>700?1:2,noise:Math.max(0,num('sensorNoise')),exposure:num('exposureGain'),exposureMs:num('exposureMs'),speed:num('driveSpeed'),turnRateDegS:num('turnRate'),defocus:Math.max(0,num('defocus')),seed:visionSeed}}
-// Scene seen by the rendered camera: CELL back and side panels (the opening is left open) and the frame legs and crossbar.
+// Scene seen by the rendered camera: CELL back, bottom and side panels (the opening is left open) and the frame legs and crossbar.
 function cameraScene(){let polygons=[],cylinders=FRAME_LEGS.map(([a,b])=>({a,b,radius:LEG_RADIUS,albedo:.75}));cylinders.push({a:{x:-frameW/2,y:0,z:pivotZ},b:{x:frameW/2,y:0,z:pivotZ},radius:LEG_RADIUS,albedo:.8});
- for(let name of ['red','blue'])for(let s of [-1,1]){let g=currentCellGeometry(name,s),albedo=name==='red'?.42:.36;polygons.push({points:g.back,albedo});g.aperture.forEach((p,i)=>{let j=(i+1)%g.aperture.length;polygons.push({points:[p,g.aperture[j],g.back[j],g.back[i]],albedo:albedo+.08})})}
+ for(let name of ['red','blue'])for(let s of [-1,1]){let g=currentCellGeometry(name,s),albedo=name==='red'?.42:.36;polygons.push({points:g.back,albedo});g.aperture.forEach((p,i)=>{let j=(i+1)%g.aperture.length,quad=[p,g.aperture[j],g.back[j],g.back[i]];
+  // The clear bottom panel, which carries the tag cluster, sits inside the rim as in the official CAD.
+  if(i===0)quad=quad.map(q=>({x:q.x+g.tangent.x*Loc.BOTTOM_INSET,y:q.y+g.tangent.y*Loc.BOTTOM_INSET,z:q.z+g.tangent.z*Loc.BOTTOM_INSET}));polygons.push({points:quad,albedo:albedo+.08})})}
  return {polygons,cylinders}}
 function robotPose(){return {x:num('x'),y:num('y'),headingDeg:num('yaw')}}
 // A sight line is blocked by the HIVE frame legs or a CELL; samples 3 cm apart with a 1.6 cm probe leave no gaps in thin skins.
