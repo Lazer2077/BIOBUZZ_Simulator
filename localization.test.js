@@ -49,6 +49,32 @@ const f = L.createPoseFilter();
 f.update({x:1, y:2, headingDeg:90, std:{x:.01,y:.01,headingDeg:.5}});
 f.predict(.1, {dx:.5});
 assert.ok(Math.abs(f.state.x-1) < 1e-9 && Math.abs(f.state.y-2.5) < 1e-9, 'forward odometry at heading 90° must move +Y');
+// Frame tags: four, on the legs facing the shooting sides, and clear of the leg they are mounted on.
+const frame = L.frameTags();
+assert.deepEqual(frame.map(t => t.id), [13,14,15,16]);
+assert.ok(frame.every(t => t.group === 'frame' && Math.abs(Math.abs(t.yawDeg) - 90) < 1e-9 && Math.sign(t.y) === Math.sign(t.yawDeg)), 'frame tags face away from the HIVE toward ±Y');
+assert.equal(L.defaultTags().length, 16);
+
+// Tag choice: 'auto' aims from the frame tags whenever one is seen, otherwise from everything.
+const layout = L.defaultTags();
+assert.deepEqual(L.selectTags(layout, 'auto', [7,8,13]).map(t => t.id), [13,14,15,16]);
+assert.equal(L.selectTags(layout, 'auto', [7,8]).length, 16);
+assert.deepEqual(L.selectTags(layout, 'wall', []).map(t => t.group), Array(12).fill('wall'));
+
+// Wall tags misplaced relative to the HIVE: aiming from the frame tags is unaffected, walls alone are not.
+const shooter = {x:-0.6, y:1.8, headingDeg:-78.67}, hive = {x:-25.5*.0254/2, y:.41};
+const aimYawError = r => { const e = r.estimate, b = (p) => Math.atan2(hive.y-p.y, hive.x-p.x)*180/Math.PI;
+  return Math.abs(((shooter.headingDeg + b(e) - e.headingDeg - b(shooter)) + 540) % 360 - 180) };
+let wallWorst = 0, autoWorst = 0;
+for (let seed = 1; seed <= 6; seed++) {
+  const moved = L.perturbTags(layout, {sigma:.03, seed});
+  assert.ok(moved.filter(t => t.group === 'frame').every((t,i) => t === frame[i] || (t.x === frame[i].x && t.y === frame[i].y)), 'frame tags are never perturbed');
+  wallWorst = Math.max(wallWorst, aimYawError(L.localize({robot:shooter, tags:moved, layout, use:'wall', pixelNoise:.5, seed})));
+  autoWorst = Math.max(autoWorst, aimYawError(L.localize({robot:shooter, tags:moved, layout, use:'auto', pixelNoise:.5, seed})));
+}
+assert.ok(autoWorst < .2, 'auto aim error must stay under 0.2° with 3 cm wall tag error: ' + autoWorst);
+assert.ok(wallWorst > 5*autoWorst, `walls-only aim must be visibly worse (${wallWorst.toFixed(2)}° vs ${autoWorst.toFixed(2)}°)`);
+
 // Quality gate: blur from the gyro rate, and a lone distant tag.
 const gateCam = L.defaultCamera();
 assert.equal(L.qualityGate({x:0,y:0,headingDeg:0,tagIds:[1,2]}, {camera:gateCam, turnRateDegS:10}).ok, true);
@@ -68,7 +94,7 @@ require('./vendor/apriltag-wasm.js')().then(Module => {
 
   const robot = {x:0, y:1.5, headingDeg:-60};
   const clean = C.localizeFromImage({detector, robot, effects:{noise:0}});
-  assert.deepEqual(clean.detections.map(d => d.id).sort((a,b)=>a-b), [8,9,10,11], 'the detector must find the wall tags in the rendered frame');
+  assert.deepEqual(clean.detections.map(d => d.id).sort((a,b)=>a-b), [8,9,10,11,14], 'the detector must find the wall and frame tags in the rendered frame');
   const pose = L.cameraPose(robot, L.defaultCamera()), K = L.intrinsics(L.defaultCamera()), tags = L.defaultTags();
   for (const d of clean.detections) {
     const ideal = L.tagCorners(tags.find(t => t.id === d.id)).map(P => L.project(P, pose, K));
@@ -85,6 +111,7 @@ require('./vendor/apriltag-wasm.js')().then(Module => {
   assert.ok(Math.hypot(xu-.3, yu+.2) < 1e-9, 'undistort must invert distort');
 
   const blurred = C.localizeFromImage({detector, robot, effects:{turnRateDegS:150}});
-  assert.equal(blurred.detections.length, 0, 'a 150°/s turn over an 8 ms exposure smears the tags beyond decoding');
+  assert.ok(blurred.detections.every(d => d.id === 14), 'a 150°/s turn smears the distant wall tags beyond decoding; only the large nearby frame tag survives');
+  assert.deepEqual(L.qualityGate(blurred.estimate, {turnRateDegS:150}).reasons, ['blur'], 'the gate must reject the blurred estimate');
   console.log('Localization checks passed (including the AprilTag image pipeline)');
 });

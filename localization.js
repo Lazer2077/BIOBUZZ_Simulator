@@ -16,10 +16,19 @@ function defaultCamera(){return {imageWidth:640,imageHeight:480,hfovDeg:70,mount
 function intrinsics(cam){let fx=cam.imageWidth/2/Math.tan(cam.hfovDeg*DEG/2);return {fx,fy:fx,cx:cam.imageWidth/2,cy:cam.imageHeight/2}}
 
 // Three tags on each perimeter wall, facing into the field. IDs 1–3 on +Y, 4–6 on −X, 7–9 on −Y, 10–12 on +X.
-function defaultTags(half=72*IN,z=WALL_TAG_Z,size=TAG_SIZE){let tags=[],id=1;
+function wallTags(half=72*IN,z=WALL_TAG_Z,size=TAG_SIZE){let tags=[],id=1;
  for(const [wx,wy,yawDeg] of [[0,1,-90],[-1,0,0],[0,-1,90],[1,0,180]])for(const along of [-1.2,0,1.2])
-  tags.push({id:id++,x:wx?wx*half:along,y:wy?wy*half:along,z,yawDeg,size});
+  tags.push({id:id++,group:'wall',x:wx?wx*half:along,y:wy?wy*half:along,z,yawDeg,size});
  return tags}
+// Placeholder: one tag on the outer face of each HIVE frame leg (the frame does not tip), facing the shooting side the
+// leg is on, IDs 13–16. Mounted below the CELLs, they stay visible from a low camera and, being next to the target,
+// constrain the robot's bearing and range to the HIVE directly.
+const FRAME_W=49.46*IN,FRAME_D=38.95*IN,PIVOT_Z=43.95*IN,LEG_RADIUS=.5*IN,FRAME_TAG_Z=.45;
+// The legs lean in toward the pivot, so the plate stands off far enough to clear the leg at the tag's lower white edge.
+function frameTags(size=TAG_SIZE,z=FRAME_TAG_Z){let tags=[],id=13,f=1-z/PIVOT_Z,bottom=1-(z-size*5/8)/PIVOT_Z;
+ for(const sy of [1,-1])for(const sx of [-1,1])tags.push({id:id++,group:'frame',x:sx*FRAME_W/2*f,y:sy*(FRAME_D/2*bottom+LEG_RADIUS+.01),z,yawDeg:sy*90,size});
+ return tags}
+function defaultTags(){return [...wallTags(),...frameTags()]}
 
 // Corners in the order bottom-left, bottom-right, top-right, top-left as seen from in front of the tag.
 function tagCorners(tag){let a=tag.yawDeg*DEG,nx=Math.cos(a),ny=Math.sin(a),h=tag.size/2,rx=-ny*h,ry=nx*h;
@@ -129,14 +138,30 @@ function createPoseFilter({processStd={xy:.02,headingDeg:1},measurementFloor={xy
    P=P.map((row,i)=>row.map((v,j)=>v-[0,1,2].reduce((acc,k)=>acc+Kg[i][k]*P[k][j],0)));return this.state}}}
 
 // Detect over several frames (independent pixel noise, robot static) and fuse the per-frame estimates.
-function localize({robot,camera,tags=defaultTags(),pixelNoise=.5,seed=1,frames=1,dropout=0,occluded=null}={}){
- let filter=createPoseFilter(),last=null,frameEstimates=[];
+// Wall tags as actually mounted relative to the HIVE: each is shifted along and across the wall by N(0, σ) and turned by
+// N(0, 20°/m·σ), modelling field assembly tolerance and HIVE placement. Height is left exact: with the camera near tag
+// height the solver ranges from elevation, so a height error of a few cm would dominate everything else.
+// Frame tags move with the HIVE and stay exact.
+function perturbTags(tags,{sigma=0,seed=1,group='wall'}={}){if(!(sigma>0))return tags;let random=rng(seed*7+3);
+ return tags.map(t=>{if(t.group!==group)return t;let a=t.yawDeg*DEG,along=sigma*random.gauss(),across=sigma*random.gauss();
+  return {...t,x:t.x-Math.sin(a)*along+Math.cos(a)*across,y:t.y+Math.cos(a)*along+Math.sin(a)*across,yawDeg:t.yawDeg+20*sigma*random.gauss()}})}
+
+// Which tags of the layout the solver uses: 'all', 'wall', 'frame', or 'auto', which aims from the frame tags alone
+// whenever any is in view (they sit on the target, so wall-tag mounting error cannot bias the aim; a lone frame tag
+// is close enough to give a sound pose, and the quality gate still rejects one beyond 1.5 m) and otherwise uses every tag.
+function selectTags(layout,use,detectedIds){if(use==='wall'||use==='frame')return layout.filter(t=>t.group===use);
+ if(use==='auto'){let frame=layout.filter(t=>t.group==='frame');if(frame.some(t=>detectedIds.includes(t.id)))return frame}return layout}
+
+// tags are where the tags really are (what the camera sees); layout is where the solver believes they are, so a
+// perturbed tags list models mounting error. The tag choice is made on the first frame and kept for the rest.
+function localize({robot,camera,tags=defaultTags(),layout=tags,use='all',pixelNoise=.5,seed=1,frames=1,dropout=0,occluded=null}={}){
+ let filter=createPoseFilter(),last=null,frameEstimates=[],mapTags=layout;
  for(let k=0;k<Math.max(1,frames|0);k++){last=detect({robot,camera,tags,pixelNoise,seed:seed+k*7919,dropout,occluded});
-  let e=estimate(last.detections,{camera:last.camera,tags});frameEstimates.push(e);if(e)filter.update(e)}
+  if(!k)mapTags=selectTags(layout,use,last.detections.map(d=>d.id));let e=estimate(last.detections,{camera:last.camera,tags:mapTags});frameEstimates.push(e);if(e)filter.update(e)}
  let fused=filter.state,est=fused&&{...frameEstimates.filter(Boolean).pop(),x:fused.x,y:fused.y,headingDeg:fused.headingDeg,std:fused.std,covariance:fused.covariance};
- return {estimate:est,detections:last.detections,rejected:last.rejected,camera:last.camera,cameraPose:last.cameraPose,framesUsed:frameEstimates.filter(Boolean).length,
+ return {estimate:est,mapTagIds:mapTags.map(t=>t.id),detections:last.detections,rejected:last.rejected,camera:last.camera,cameraPose:last.cameraPose,framesUsed:frameEstimates.filter(Boolean).length,
   error:est?{x:est.x-robot.x,y:est.y-robot.y,position:Math.hypot(est.x-robot.x,est.y-robot.y),headingDeg:wrap((est.headingDeg-robot.headingDeg)*DEG)/DEG}:null}}
 
-const api={TAG_SIZE,defaultCamera,defaultTags,intrinsics,tagCorners,cameraPose,project,toCamera,detect,estimate,localize,createPoseFilter,qualityGate};
+const api={TAG_SIZE,defaultCamera,defaultTags,wallTags,frameTags,perturbTags,selectTags,intrinsics,tagCorners,cameraPose,project,toCamera,detect,estimate,localize,createPoseFilter,qualityGate};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FiducialLocalizer=api;
 })(typeof window!=='undefined'?window:globalThis);
