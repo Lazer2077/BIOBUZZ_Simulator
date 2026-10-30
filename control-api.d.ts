@@ -12,7 +12,28 @@ export interface ShotInput {
   drag?: number;           // dimensionless Cd; exploratory range 0.3–1.0
   ballType?: BallType;
   releaseTorque?: number;  // tip threshold, N·m
+  useVision?: boolean;     // solve() aims from the camera pose estimate
+  cameraHeight?: number;   // m above the tiles
+  cameraPitchDeg?: number; // up positive
+  cameraFovDeg?: number;   // horizontal field of view
+  pixelNoise?: number;     // corner noise σ, px
+  frames?: number;         // frames fused per estimate
+  seed?: number;           // integer noise seed
 }
+
+export type TagRejection = 'behind' | 'range' | 'angle' | 'fov' | 'small' | 'occluded' | 'dropout';
+export interface Pose2D { x: number; y: number; headingDeg: number }
+export interface FieldTag { id: number; x: number; y: number; z: number; yawDeg: number; size: number }
+export interface Localization {
+  truth: Pose2D;
+  estimate: (Pose2D & { std: { x: number; y: number; headingDeg: number } | null; rmsPx: number; outlierTagIds: number[] }) | null;
+  error: { x: number; y: number; position: number; headingDeg: number } | null;
+  detectedTagIds: number[];
+  rejected: { id: number; reason: TagRejection }[];
+  framesUsed: number;
+  detections: { id: number; corners: { u: number; v: number }[]; ideal: { u: number; v: number }[] }[];
+}
+export interface VisionAim { ok: boolean; estimate: Pose2D | null; error: Localization['error'] }
 
 export interface HiveState {
   up: -1 | 1;              // side of upward CELL on field Y axis
@@ -53,8 +74,10 @@ export interface Prediction {
 export interface HiveControlAPI {
   getState(): FieldState;
   predict(input?: ShotInput): Prediction;
-  solve(input?: ShotInput): (Prediction & { openingClearance: number }) |
-    { status: 'unreachable'; team: 'red' | 'blue'; cellSide: -1 | 1; target: Vec3 };
+  solve(input?: ShotInput): (Prediction & { openingClearance: number; vision: VisionAim | null }) |
+    { status: 'unreachable'; team: 'red' | 'blue'; cellSide: -1 | 1; target: Vec3; vision: VisionAim | null };
+  localize(input?: ShotInput): Localization | null;
+  getTags(): FieldTag[];
   fire(input?: ShotInput): { shot: Prediction; tipped: boolean; state: FieldState };
   reset(): FieldState;
 }

@@ -4,12 +4,12 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-i18n="title">BIOBUZZ HIVE 射击模拟器</title>
 <style>
-:root{font-family:system-ui,"Microsoft YaHei",sans-serif;color:#eaf0f8;background:#0d1420}*{box-sizing:border-box}body{margin:0}header{padding:18px 24px;background:#172335;border-bottom:1px solid #304158}h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#9fb2c8;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;min-height:calc(100vh - 83px)}main{padding:16px;min-width:0}.panel{background:#142033;border:1px solid #31445b;border-radius:12px;padding:14px}.views{display:grid;grid-template-columns:2fr 1fr;gap:12px}canvas{width:100%;height:530px;display:block;background:#101b2a;border-radius:8px;cursor:grab}canvas:active{cursor:grabbing}aside{padding:16px;background:#111d2d;border-left:1px solid #304158;overflow:auto}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:20px 0 9px;color:#b4c9df}.field{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:8px;margin:9px 0}.field label{font-size:13px;color:#c4d2e1}.field input,.field select{width:100%;background:#1e3046;color:#fff;border:1px solid #49627c;border-radius:6px;padding:6px}.field input:focus,.field select:focus{outline:2px solid #48b5f5}button{background:#286aa3;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;margin:4px 4px 4px 0}button:hover{background:#3487cd}.result{margin-top:14px;padding:12px;border-radius:8px;background:#1c3044;line-height:1.55;font-size:13px}.hit{color:#61e5a0}.miss{color:#ffbd77}.legend{font-size:12px;color:#9fb2c8;line-height:1.6;margin-top:12px}.note{font-size:12px;color:#aebfd0;line-height:1.5;margin-top:12px}a{color:#8cccff}.headline{display:flex;align-items:center;justify-content:space-between;gap:12px}.lang{margin:0;padding:6px 12px;background:#1e3046;border:1px solid #49627c;font-size:13px}.lang:hover{background:#2a4360}.keys{width:100%;border-collapse:collapse;margin-top:4px}.keys td{padding:3px 0;vertical-align:top}.keys td:first-child{white-space:nowrap;padding-right:10px}kbd{display:inline-block;min-width:20px;padding:1px 5px;margin:1px 1px;border:1px solid #49627c;border-bottom-width:2px;border-radius:4px;background:#1e3046;color:#fff;font:12px ui-monospace,monospace;text-align:center}@media(max-width:950px){.layout{display:block}.views{grid-template-columns:1fr}canvas{height:380px}aside{border-left:0}}
+:root{font-family:system-ui,"Microsoft YaHei",sans-serif;color:#eaf0f8;background:#0d1420}*{box-sizing:border-box}body{margin:0}header{padding:18px 24px;background:#172335;border-bottom:1px solid #304158}h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#9fb2c8;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;min-height:calc(100vh - 83px)}main{padding:16px;min-width:0}.panel{background:#142033;border:1px solid #31445b;border-radius:12px;padding:14px}.views{display:grid;grid-template-columns:2fr 1fr;gap:12px}canvas{width:100%;height:530px;display:block;background:#101b2a;border-radius:8px;cursor:grab}canvas:active{cursor:grabbing}aside{padding:16px;background:#111d2d;border-left:1px solid #304158;overflow:auto}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:20px 0 9px;color:#b4c9df}.field{display:grid;grid-template-columns:1fr 90px;align-items:center;gap:8px;margin:9px 0}.field label{font-size:13px;color:#c4d2e1}.field input,.field select{width:100%;background:#1e3046;color:#fff;border:1px solid #49627c;border-radius:6px;padding:6px}.field input:focus,.field select:focus{outline:2px solid #48b5f5}button{background:#286aa3;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer;margin:4px 4px 4px 0}button:hover{background:#3487cd}.result{margin-top:14px;padding:12px;border-radius:8px;background:#1c3044;line-height:1.55;font-size:13px}.hit{color:#61e5a0}.miss{color:#ffbd77}.legend{font-size:12px;color:#9fb2c8;line-height:1.6;margin-top:12px}.note{font-size:12px;color:#aebfd0;line-height:1.5;margin-top:12px}a{color:#8cccff}.headline{display:flex;align-items:center;justify-content:space-between;gap:12px}.lang{margin:0;padding:6px 12px;background:#1e3046;border:1px solid #49627c;font-size:13px}.lang:hover{background:#2a4360}.keys{width:100%;border-collapse:collapse;margin-top:4px}.keys td{padding:3px 0;vertical-align:top}.keys td:first-child{white-space:nowrap;padding-right:10px}kbd{display:inline-block;min-width:20px;padding:1px 5px;margin:1px 1px;border:1px solid #49627c;border-bottom-width:2px;border-radius:4px;background:#1e3046;color:#fff;font:12px ui-monospace,monospace;text-align:center}#camera{height:auto;aspect-ratio:4/3;max-width:640px;cursor:default}.camera-panel{margin-top:12px}.check{display:flex;align-items:center;gap:8px;font-size:13px;color:#c4d2e1;margin:9px 0}.check input{width:16px;height:16px}@media(max-width:950px){.layout{display:block}.views{grid-template-columns:1fr}canvas{height:380px}aside{border-left:0}}
 </style>
 </head>
 <body>
 <header><div class="headline"><h1 data-i18n="heading">FTC BIOBUZZ · HIVE 射击模拟器</h1><button id="lang" type="button" class="lang" aria-label="Switch language">English</button></div><p data-i18n="intro">SI 单位计算；左右拖动三维视图绕 Z 轴旋转，滚轮放大或缩小视图。轨迹和开口尺寸用于高射控制算法初步验证。</p></header>
-<div class="layout"><main><div class="views"><section class="panel"><h2 data-i18n="scene">三维场景</h2><canvas id="scene"></canvas></section><section class="panel"><h2 data-i18n="sideView">侧视图 / 轨迹</h2><canvas id="side"></canvas></section></div><p class="legend" data-i18n="legend">蓝色 / 红色：两组 HIVE；黄色：所选开口；青色：球轨迹；白色：发射点。坐标：X 沿红蓝 HIVE 排列方向，Y 沿每组两个 CELL 排列方向，Z 向上。中心转轴位于 X=0、Y=0。</p></main>
+<div class="layout"><main><div class="views"><section class="panel"><h2 data-i18n="scene">三维场景</h2><canvas id="scene"></canvas></section><section class="panel"><h2 data-i18n="sideView">侧视图 / 轨迹</h2><canvas id="side"></canvas></section></div><p class="legend" data-i18n="legend">蓝色 / 红色：两组 HIVE；黄色：所选开口；青色：球轨迹；白色：发射点。坐标：X 沿红蓝 HIVE 排列方向，Y 沿每组两个 CELL 排列方向，Z 向上。中心转轴位于 X=0、Y=0。</p><section class="panel camera-panel"><h2 data-i18n="cameraView">机器人相机画面（模拟）</h2><canvas id="camera"></canvas><p class="legend" data-i18n="cameraLegend"></p></section></main>
 <aside><h2 data-i18n="launch">发射与目标</h2>
 <div class="field"><label for="team" data-i18n="team">最近的 HIVE</label><select id="team" disabled><option value="red" data-i18n="red">红色</option><option value="blue" data-i18n="blue">蓝色</option></select></div>
 <div class="field"><label for="state" data-i18n="upCell">朝上的 CELL</label><select id="state" disabled><option value="1" data-i18n="plusY">+Y 侧</option><option value="-1" data-i18n="minusY">−Y 侧</option></select></div>
@@ -25,12 +25,22 @@
 <button id="aim" data-i18n="aim">自动求解角度</button><button id="play" data-i18n="play">发射一球</button><button id="reset" data-i18n="resetView">重置视角</button><button id="resetHive" data-i18n="resetHive">重置 HIVE</button>
 <div class="result" id="result"></div>
 <div class="result" id="balance"></div>
+<h3 data-i18n="vision">相机 / AprilTag 定位</h3>
+<div class="field"><label for="camHeight" data-i18n="camHeight">相机高度 (m)</label><input id="camHeight" type="number" min="0.05" max="1.2" step="0.01" value="0.30"></div>
+<div class="field"><label for="camPitch" data-i18n="camPitch">相机俯仰 (°，向上为正)</label><input id="camPitch" type="number" min="-30" max="45" step="0.5" value="10"></div>
+<div class="field"><label for="camFov" data-i18n="camFov">水平视场角 (°)</label><input id="camFov" type="number" min="30" max="120" step="1" value="70"></div>
+<div class="field"><label for="pixelNoise" data-i18n="pixelNoise">角点噪声 σ (px)</label><input id="pixelNoise" type="number" min="0" max="10" step="0.1" value="0.5"></div>
+<div class="field"><label for="frames" data-i18n="frames">融合帧数</label><input id="frames" type="number" min="1" max="20" step="1" value="3"></div>
+<label class="check"><input id="visionAim" type="checkbox"><span data-i18n="visionAim">用视觉估计的位姿瞄准</span></label>
+<button id="resample" data-i18n="resample">重新采样噪声</button>
+<div class="result" id="visionResult"></div>
 <div class="note" data-i18n="note">飞行采用平方阻力，Cᴅ=0.3–1.0 是同类穿孔球的探索范围，不是 NECTAR 实测值。CELL 内外的侧板和背板按 CAD 网格计算；边缘用与 CAD 对齐的五边形约束，弹簧阻尼接触追踪至弹出、静止或 3 秒上限。橙点标出接触位置。碰撞次数仅供观察，不决定留球。初始三颗球先经重力和球间接触沉降。球体弹性与最终留球率须实测标定。</div>
 <div class="note" data-i18n-html="sources">资料：<a href="https://ftc-resources.firstinspires.org/ftc/game/manual" target="_blank">竞赛手册 §9.6、§10.3、§10.5</a> · <a href="https://ftc-resources.firstinspires.org/ftc/field/initialfieldguide" target="_blank">CELL 装配指南</a> · <a href="https://andymark.com/products/biobuzz-scoring-elements" target="_blank">球重量</a> · <a href="https://www.youtube.com/watch?v=sUH3z5a5S9I&t=200s" target="_blank">官方动画</a></div>
 <div class="note" data-i18n-html="keys"></div>
 </aside></div>
 <script src="vendor/three.min.js"></script>
 <script src="cad/hive-mesh.js"></script>
+<script src="localization.js"></script>
 <script>
 // All geometry and flight calculations use metres and seconds.
 const IN=.0254,G=9.80665, W=20*IN,H=14*IN,D=12*IN;
@@ -38,9 +48,9 @@ const pivotZ=43.95*IN, frameW=49.46*IN, frameD=38.95*IN;
 const hiveOffset=25.5*IN/2, cellOffset=.4075;
 const lowOpening=53.5*IN, highOpening=65.6*IN;
 const openingZ=1.5003, pitch=Math.PI/3, shoulder=-H/2+7.61*IN;
-const ids=['team','state','x','y','z','speed','angle','yaw','diameter','drag','threshold'];
+const ids=['team','state','x','y','z','speed','angle','yaw','diameter','drag','threshold','camHeight','camPitch','camFov','pixelNoise','frames','visionAim'];
 const el=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
-const scene=document.getElementById('scene'),side=document.getElementById('side'),result=document.getElementById('result'),balance=document.getElementById('balance');
+const scene=document.getElementById('scene'),side=document.getElementById('side'),cameraView=document.getElementById('camera'),visionResult=document.getElementById('visionResult'),result=document.getElementById('result'),balance=document.getElementById('balance');
 const fixedElevation=.39, ballMass={pollen:.055*.45359237,nectar:.091*.45359237},lever=.392;
 const AIR_DENSITY=1.2,CONTACT_STIFFNESS=4200,CONTACT_DAMPING=7,CONTACT_FRICTION=.35;
 const ballType=()=>el.diameter.value==='0.071'?'pollen':'nectar';
@@ -48,23 +58,35 @@ const I18N={
  zh:{title:'BIOBUZZ HIVE 射击模拟器',heading:'FTC BIOBUZZ · HIVE 射击模拟器',intro:'SI 单位计算；左右拖动三维视图绕 Z 轴旋转，滚轮放大或缩小视图。轨迹和开口尺寸用于高射控制算法初步验证。',scene:'三维场景',sideView:'侧视图 / 轨迹',
   legend:'蓝色 / 红色：两组 HIVE；黄色：所选开口；青色：球轨迹；白色：发射点。坐标：X 沿红蓝 HIVE 排列方向，Y 沿每组两个 CELL 排列方向，Z 向上。中心转轴位于 X=0、Y=0。',launch:'发射与目标',team:'最近的 HIVE',red:'红色',blue:'蓝色',upCell:'朝上的 CELL',plusY:'+Y 侧',minusY:'−Y 侧',
   x:'发射点 X (m)',y:'发射点 Y (m)',z:'发射高度 Z (m)',speed:'初速 (m/s)',angle:'仰角 (°)',yaw:'水平角 (°)',ball:'球直径',drag:'阻力系数 Cᴅ (估算 0.3–1.0)',threshold:'翻转附加力矩 (N·m)',aim:'自动求解角度',play:'发射一球',resetView:'重置视角',resetHive:'重置 HIVE',
-  keys:`<strong>键盘操作</strong>（焦点不在输入框时）<table class="keys"><tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>移动发射点（相对三维视角：W 远离镜头，A/D 屏幕左右）</td></tr><tr><td><kbd>↑</kbd><kbd>↓</kbd></td><td>仰角 ±</td></tr><tr><td><kbd>←</kbd><kbd>→</kbd></td><td>水平角 ±</td></tr><tr><td><kbd>Q</kbd><kbd>E</kbd></td><td>初速 −/+</td></tr><tr><td><kbd>R</kbd><kbd>F</kbd></td><td>发射高度 +/−</td></tr><tr><td><kbd>Z</kbd><kbd>X</kbd></td><td>旋转三维视角</td></tr><tr><td><kbd>B</kbd></td><td>切换 POLLEN / NECTAR</td></tr><tr><td><kbd>Enter</kbd></td><td>自动求解角度</td></tr><tr><td><kbd>空格</kbd></td><td>发射一球</td></tr><tr><td><kbd>C</kbd></td><td>重置视角</td></tr><tr><td><kbd>Shift</kbd></td><td>按住加快移动和调整</td></tr></table>`,
+  keys:`<strong>键盘操作</strong>（焦点不在输入框时）<table class="keys"><tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>移动发射点（相对三维视角：W 远离镜头，A/D 屏幕左右）</td></tr><tr><td><kbd>↑</kbd><kbd>↓</kbd></td><td>仰角 ±</td></tr><tr><td><kbd>←</kbd><kbd>→</kbd></td><td>水平角 ±</td></tr><tr><td><kbd>Q</kbd><kbd>E</kbd></td><td>初速 −/+</td></tr><tr><td><kbd>R</kbd><kbd>F</kbd></td><td>发射高度 +/−</td></tr><tr><td><kbd>Z</kbd><kbd>X</kbd></td><td>旋转三维视角</td></tr><tr><td><kbd>B</kbd></td><td>切换 POLLEN / NECTAR</td></tr><tr><td><kbd>Enter</kbd></td><td>自动求解角度</td></tr><tr><td><kbd>空格</kbd></td><td>发射一球</td></tr><tr><td><kbd>C</kbd></td><td>重置视角</td></tr><tr><td><kbd>V</kbd></td><td>开关视觉瞄准</td></tr><tr><td><kbd>N</kbd></td><td>重新采样相机噪声</td></tr><tr><td><kbd>Shift</kbd></td><td>按住加快移动和调整</td></tr></table>`,
   note:'飞行采用平方阻力，Cᴅ=0.3–1.0 是同类穿孔球的探索范围，不是 NECTAR 实测值。CELL 内外的侧板和背板按 CAD 网格计算；边缘用与 CAD 对齐的五边形约束，弹簧阻尼接触追踪至弹出、静止或 3 秒上限。橙点标出接触位置。碰撞次数仅供观察，不决定留球。初始三颗球先经重力和球间接触沉降。球体弹性与最终留球率须实测标定。',
   sources:['资料：','竞赛手册 §9.6、§10.3、§10.5','CELL 装配指南','球重量','官方动画'],switchTo:'English',
   kinds:{'封闭背板':'封闭背板','侧面':'侧面','开口边框':'开口边框','内壁':'内壁'},
   collided:k=>`碰到 CELL ${k}，投射失败`,collisionTime:'碰撞时间：',collisionAt:'碰撞位置 ',retained:'命中开口并留在 CELL',notRetained:'进入开口，但未留在 CELL',notEntered:'未进入开口',crossing:'穿越开口平面：',crossPoint:'交点 ',offset:'相对开口中心：',
   escaped:'从开口弹出；',settled:'已在腔体内静止；',unsettled:'在追踪时限内尚未稳定；',contacts:(n,list)=>`内部碰撞 ${n} 次；前三次：${list||'无'}`,listSep:'、',noCross:'未穿越开口平面',closest:d=>`轨迹距目标中心最近约 ${d} cm`,
-  hive:n=>n==='red'?'红 HIVE':'蓝 HIVE',balance:(up,nectar,pollen,tips)=>`：朝上 ${up}，${nectar} NECTAR + ${pollen} POLLEN，翻转 ${tips} 次`,torque:'附加力矩 ',falling:' · 正在下坠',noSolution:'当前初速下没有找到可进入开口的角度；试着提高初速或调整发射点。'},
+  hive:n=>n==='red'?'红 HIVE':'蓝 HIVE',balance:(up,nectar,pollen,tips)=>`：朝上 ${up}，${nectar} NECTAR + ${pollen} POLLEN，翻转 ${tips} 次`,torque:'附加力矩 ',falling:' · 正在下坠',noSolution:'当前初速下没有找到可进入开口的角度；试着提高初速或调整发射点。',
+  vision:'相机 / AprilTag 定位',camHeight:'相机高度 (m)',camPitch:'相机俯仰 (°，向上为正)',camFov:'水平视场角 (°)',pixelNoise:'角点噪声 σ (px)',frames:'融合帧数',visionAim:'用视觉估计的位姿瞄准',resample:'重新采样噪声',cameraView:'机器人相机画面（模拟）',
+  cameraLegend:'相机装在发射器上，机器人朝向等于水平角，画面 640×480、无畸变。白色方块：检测到的标签，绿色框为加噪角点；灰色：看得到但被拒绝的标签。标签位置和尺寸（6.5 in，每面墙 3 个，离地 0.2 m）是占位值，图案只是示意，不是真实 AprilTag 编码。',
+  reasons:{behind:'在相机后方',range:'超出距离',angle:'视角过斜',fov:'超出画面',small:'像素太小',occluded:'被遮挡',dropout:'丢帧'},
+  visionSeen:(n,list)=>`检测到 ${n} 个标签：${list||'无'}`,visionNone:'没有可用的标签，无法定位',visionRejected:list=>`被拒绝：${list}`,
+  visionEst:'估计位姿 ',visionTruth:'真实位姿 ',visionErr:(cm,deg)=>`误差：位置 ${cm} cm，朝向 ${deg}°`,visionStd:(x,y,h)=>`1σ：X ${x} cm，Y ${y} cm，朝向 ${h}°`,visionRms:(px,n)=>`重投影 RMS ${px} px · 融合 ${n} 帧`,visionOutliers:list=>`剔除离群标签：${list}`,
+  visionAimUsed:(cm,deg)=>`视觉瞄准：按估计位姿求解（位置误差 ${cm} cm，朝向误差 ${deg}°），从真实位置发射`,visionAimNone:'视觉瞄准：看不到标签，无法求解；关闭视觉瞄准或转向标签。'},
  en:{title:'BIOBUZZ HIVE Shot Simulator',heading:'FTC BIOBUZZ · HIVE Shot Simulator',intro:'SI units. Drag the 3D view left or right to orbit around Z; scroll to zoom. Trajectories and opening dimensions are for early validation of launcher control algorithms.',scene:'3D scene',sideView:'Side view / trajectory',
   legend:'Blue / red: the two HIVEs; yellow: selected opening; cyan: ball trajectory; white: launch point. Axes: X runs between the red and blue HIVEs, Y between the two CELLs of a HIVE, Z is up. The pivot is at X=0, Y=0.',launch:'Launch and target',team:'Nearest HIVE',red:'Red',blue:'Blue',upCell:'Upward CELL',plusY:'+Y side',minusY:'−Y side',
   x:'Launch X (m)',y:'Launch Y (m)',z:'Launch height Z (m)',speed:'Launch speed (m/s)',angle:'Elevation (°)',yaw:'Yaw (°)',ball:'Ball',drag:'Drag coefficient Cᴅ (est. 0.3–1.0)',threshold:'Tip torque threshold (N·m)',aim:'Solve angle',play:'Launch one ball',resetView:'Reset view',resetHive:'Reset HIVEs',
-  keys:`<strong>Keyboard</strong> (when no input box has focus)<table class="keys"><tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Move the launch point (relative to the 3D view: W away from the camera, A/D screen left/right)</td></tr><tr><td><kbd>↑</kbd><kbd>↓</kbd></td><td>Elevation up/down</td></tr><tr><td><kbd>←</kbd><kbd>→</kbd></td><td>Yaw left/right</td></tr><tr><td><kbd>Q</kbd><kbd>E</kbd></td><td>Launch speed −/+</td></tr><tr><td><kbd>R</kbd><kbd>F</kbd></td><td>Launch height +/−</td></tr><tr><td><kbd>Z</kbd><kbd>X</kbd></td><td>Orbit the 3D view</td></tr><tr><td><kbd>B</kbd></td><td>Toggle POLLEN / NECTAR</td></tr><tr><td><kbd>Enter</kbd></td><td>Solve angle</td></tr><tr><td><kbd>Space</kbd></td><td>Launch one ball</td></tr><tr><td><kbd>C</kbd></td><td>Reset view</td></tr><tr><td><kbd>Shift</kbd></td><td>Hold to move and adjust faster</td></tr></table>`,
+  keys:`<strong>Keyboard</strong> (when no input box has focus)<table class="keys"><tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Move the launch point (relative to the 3D view: W away from the camera, A/D screen left/right)</td></tr><tr><td><kbd>↑</kbd><kbd>↓</kbd></td><td>Elevation up/down</td></tr><tr><td><kbd>←</kbd><kbd>→</kbd></td><td>Yaw left/right</td></tr><tr><td><kbd>Q</kbd><kbd>E</kbd></td><td>Launch speed −/+</td></tr><tr><td><kbd>R</kbd><kbd>F</kbd></td><td>Launch height +/−</td></tr><tr><td><kbd>Z</kbd><kbd>X</kbd></td><td>Orbit the 3D view</td></tr><tr><td><kbd>B</kbd></td><td>Toggle POLLEN / NECTAR</td></tr><tr><td><kbd>Enter</kbd></td><td>Solve angle</td></tr><tr><td><kbd>Space</kbd></td><td>Launch one ball</td></tr><tr><td><kbd>C</kbd></td><td>Reset view</td></tr><tr><td><kbd>V</kbd></td><td>Toggle vision aim</td></tr><tr><td><kbd>N</kbd></td><td>Resample camera noise</td></tr><tr><td><kbd>Shift</kbd></td><td>Hold to move and adjust faster</td></tr></table>`,
   note:'Flight uses quadratic drag; Cᴅ = 0.3–1.0 is an exploratory range for similar perforated balls, not a measured NECTAR value. CELL side and back panels use the CAD mesh; edges use a pentagon proxy aligned with the CAD, and spring-damper contact is tracked until the ball escapes, settles or 3 s elapse. Orange dots mark contacts. Contact count is informational and does not decide retention. The three starting balls first settle under gravity and ball-to-ball contact. Ball elasticity and real retention rates must be calibrated on a physical field.',
   sources:['Sources: ','Competition Manual §9.6, §10.3, §10.5','CELL assembly guide','Ball weights','Official animation'],switchTo:'中文',
   kinds:{'封闭背板':'closed back panel','侧面':'side panel','开口边框':'opening rim','内壁':'inner wall'},
   collided:k=>`Hit the CELL ${k}; shot failed`,collisionTime:'Contact time: ',collisionAt:'Contact at ',retained:'Entered the opening and stayed in the CELL',notRetained:'Entered the opening but did not stay in the CELL',notEntered:'Did not enter the opening',crossing:'Opening plane crossed: ',crossPoint:'Crossing ',offset:'From opening centre: ',
   escaped:'Bounced back out of the opening; ',settled:'Came to rest inside the CELL; ',unsettled:'Not yet at rest within the tracking limit; ',contacts:(n,list)=>`${n} internal contact${n===1?'':'s'}; first three: ${list||'none'}`,listSep:', ',noCross:'Did not cross the opening plane',closest:d=>`Closest approach to the target centre ≈ ${d} cm`,
-  hive:n=>n==='red'?'Red HIVE':'Blue HIVE',balance:(up,nectar,pollen,tips)=>`: ${up} up, ${nectar} NECTAR + ${pollen} POLLEN, ${tips} tip${tips===1?'':'s'}`,torque:'Added torque ',falling:' · tipping',noSolution:'No angle at this launch speed enters the opening; try a higher speed or a different launch point.'}};
+  hive:n=>n==='red'?'Red HIVE':'Blue HIVE',balance:(up,nectar,pollen,tips)=>`: ${up} up, ${nectar} NECTAR + ${pollen} POLLEN, ${tips} tip${tips===1?'':'s'}`,torque:'Added torque ',falling:' · tipping',noSolution:'No angle at this launch speed enters the opening; try a higher speed or a different launch point.',
+  vision:'Camera / AprilTag localization',camHeight:'Camera height (m)',camPitch:'Camera pitch (°, up +)',camFov:'Horizontal FOV (°)',pixelNoise:'Corner noise σ (px)',frames:'Frames fused',visionAim:'Aim using the vision pose estimate',resample:'Resample noise',cameraView:'Robot camera view (simulated)',
+  cameraLegend:'The camera is fixed to the launcher, so the robot heading equals the yaw; the image is 640×480 with no distortion. White squares: detected tags, with the noisy corners outlined in green; grey: tags in view but rejected. Tag positions and size (6.5 in, 3 per wall, 0.2 m above the tiles) are placeholders, and the pattern is illustrative, not a real AprilTag code.',
+  reasons:{behind:'behind the camera',range:'out of range',angle:'too oblique',fov:'outside the image',small:'too few pixels',occluded:'occluded',dropout:'dropped frame'},
+  visionSeen:(n,list)=>`${n} tag${n===1?'':'s'} detected: ${list||'none'}`,visionNone:'No usable tags; cannot localize',visionRejected:list=>`Rejected: ${list}`,
+  visionEst:'Estimated pose ',visionTruth:'True pose ',visionErr:(cm,deg)=>`Error: position ${cm} cm, heading ${deg}°`,visionStd:(x,y,h)=>`1σ: X ${x} cm, Y ${y} cm, heading ${h}°`,visionRms:(px,n)=>`Reprojection RMS ${px} px · ${n} frame${n===1?'':'s'} fused`,visionOutliers:list=>`Outlier tags removed: ${list}`,
+  visionAimUsed:(cm,deg)=>`Vision aim: solved at the estimated pose (position error ${cm} cm, heading error ${deg}°) and fired from the true position`,visionAimNone:'Vision aim: no tags in view, so no solution; turn off vision aim or face the tags.'}};
 function initialLanguage(){try{let q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q;let saved=localStorage.getItem('biobuzz-lang');if(saved==='en'||saved==='zh')return saved}catch(e){}
  return typeof navigator!=='undefined'&&navigator.language&&!/^zh/i.test(navigator.language)?'en':'zh'}
 let lang=initialLanguage();const T=()=>I18N[lang];
@@ -193,7 +215,8 @@ function integrate(){
 }
 function compute(){syncTeam();let r=integrate();samples=r.arr;hit=r.cross;collision=r.wall;insideResult=r.inside;let t=target();let closest=samples.reduce((a,p)=>Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)<a.d?{p,d:Math.hypot(p.x-t.x,p.y-t.y,p.z-t.z)}:a,{d:Infinity});
   let d=T();result.innerHTML=collision?`<strong class="miss">${d.collided(kindLabel(collision.kind))}</strong><br>${d.collisionTime}${collision.t.toFixed(3)} s<br>${d.collisionAt}X=${collision.x.toFixed(3)}, Y=${collision.y.toFixed(3)}, Z=${collision.z.toFixed(3)} m`:hit?(hit.inside?`<strong class="${insideResult?.retained?'hit':'miss'}">${insideResult?.retained?d.retained:d.notRetained}</strong>`:`<strong class="miss">${d.notEntered}</strong>`)+`<br>${d.crossing}t=${hit.t.toFixed(3)} s<br>${d.crossPoint}X=${hit.x.toFixed(3)}, Y=${hit.y.toFixed(3)}, Z=${hit.z.toFixed(3)} m<br>${d.offset}ΔX=${((hit.x-t.x)*100).toFixed(1)} cm, ΔY=${((hit.y-t.y)*100).toFixed(1)} cm`+(insideResult?`<br>${insideResult.escaped?d.escaped:insideResult.retained?d.settled:d.unsettled}${d.contacts(insideResult.events.length,insideResult.events.slice(0,3).map(e=>`${kindLabel(e.kind)} (${e.t.toFixed(2)} s)`).join(d.listSep))}`:''):`<strong class="miss">${d.noCross}</strong><br>${d.closest((closest.d*100).toFixed(1))}`;
-  updateBalance();draw();
+  if(visionAim&&(visionAim.x!==num('x')||visionAim.y!==num('y')||visionAim.yaw!==num('yaw')||visionAim.angle!==num('angle')))visionAim=null;result.innerHTML+=visionAimText();
+  updateVision();updateBalance();draw();
 }
 function updateBalance(){let threshold=num('threshold'),d=T();balance.innerHTML=['red','blue'].map(name=>{let h=hives[name],torque=h.addedMass*G*lever;return `<strong style="color:${name==='red'?'#fb8589':'#8abaff'}">${d.hive(name)}</strong>${d.balance(h.up>0?'+Y':'−Y',h.nectar,h.pollen,h.tips)}<br>${d.torque}${torque.toFixed(2)} / ${threshold.toFixed(2)} N·m${h.moving?d.falling:''}`}).join('<br><br>')}
 function recordShot(name,type){let h=hives[name];h[type]++;h.addedMass+=ballMass[type];if(insideResult?.final){h.balls.push({type,...insideResult.final});settleStoredBalls(h)}if(h.addedMass*G*lever>=num('threshold'))h.moving=true;updateBalance()}
@@ -223,7 +246,7 @@ function initCAD(){if(typeof THREE==='undefined'||!window.HIVE_CAD_MESH)return;
    let mat=new THREE.MeshPhongMaterial({color,side:THREE.DoubleSide,transparent:part!=='rib',opacity:part==='rib'?1:part==='back'?.48:.25,depthWrite:part==='rib'});group.add(new THREE.Mesh(geo,mat))}cadBallGroups[name]=new THREE.Group();group.add(cadBallGroups[name])}
  const sphere=(radius,color)=>{let mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,16,12),new THREE.MeshBasicMaterial({color}));cadWorld.add(mesh);return mesh};
  cadSource=sphere(.035,0xffffff);cadMarker=sphere(.04,0xff5252);cadTarget=sphere(.025,0xffe066);cadShotBall=sphere(.035,0xffffff);cadShotBall.visible=false;cadImpactGroup=new THREE.Group();cadWorld.add(cadImpactGroup);
- cadCamera=new THREE.PerspectiveCamera(45,1,.02,20)
+ cadCamera=new THREE.PerspectiveCamera(45,1,.02,20);if(Loc)initCadTags()
 }
 function refreshCadBalls(name){let h=hives[name],signature=`${h.up}:${h.nectar}:${h.pollen}:${h.tips}`;if(cadBallSignature[name]===signature)return;cadBallSignature[name]=signature;let group=cadBallGroups[name];for(let child of [...group.children]){group.remove(child);child.geometry.dispose();child.material.dispose()}
   cadGroups[name].updateMatrixWorld(true);h.balls.forEach(b=>{let r=b.type==='nectar'?.0455:.0355,mesh=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),new THREE.MeshPhongMaterial({color:b.type==='pollen'?0xf9df39:name==='red'?0xf14350:0x397cfa}));let p=storedBallWorld(name,b),local=cadGroups[name].worldToLocal(new THREE.Vector3(p.x,p.z,p.y));mesh.position.copy(local);group.add(mesh)})}
@@ -231,15 +254,82 @@ function drawScene(){if(!cadRenderer)return;let w=scene.clientWidth,h=scene.clie
  for(let name of ['red','blue']){let hive=hives[name],initial=name==='red'?1:-1,flip=(hive.tips%2?1:0)+(hive.moving?(hive.tips%2?-1:1)*hive.angle/Math.PI:0);cadGroups[name].rotation.x=initial*flip*Math.PI/3;refreshCadBalls(name)}
  if(cadTrackSamples!==samples){if(cadTrajectory){cadWorld.remove(cadTrajectory);cadTrajectory.geometry.dispose()}let points=samples.map(p=>new THREE.Vector3(p.x,p.z,p.y));cadTrajectory=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x69e5e0}));cadWorld.add(cadTrajectory);cadTrackSamples=samples}
  if(cadImpactRef!==insideResult){for(let child of [...cadImpactGroup.children]){cadImpactGroup.remove(child);child.geometry.dispose();child.material.dispose()}for(let e of insideResult?.events.slice(0,30)||[]){let marker=new THREE.Mesh(new THREE.SphereGeometry(.012,8,6),new THREE.MeshBasicMaterial({color:0xffa04c}));marker.position.set(e.x,e.z,e.y);cadImpactGroup.add(marker)}cadImpactRef=insideResult}
- cadSource.position.set(num('x'),num('z'),num('y'));let marker=collision||hit;cadMarker.visible=Boolean(marker);if(marker){cadMarker.position.set(marker.x,marker.z,marker.y);cadMarker.material.color.setHex(collision?0xff5252:hit.inside?0x61e5a0:0xff9273)}let aim=target();cadTarget.position.set(aim.x,aim.z,aim.y);cadRenderer.render(cadWorld,cadCamera)}
+ cadSource.position.set(num('x'),num('z'),num('y'));let marker=collision||hit;cadMarker.visible=Boolean(marker);if(marker){cadMarker.position.set(marker.x,marker.z,marker.y);cadMarker.material.color.setHex(collision?0xff5252:hit.inside?0x61e5a0:0xff9273)}let aim=target();cadTarget.position.set(aim.x,aim.z,aim.y);refreshCadVision();cadRenderer.render(cadWorld,cadCamera)}
 function drawSide(){let {ctx,w,h}=resize(side);ctx.clearRect(0,0,w,h);ctx.fillStyle='#101b2a';ctx.fillRect(0,0,w,h);let scale=Math.min(w/3,h/2.5)*sideZoom,P=p=>[w*.5+(p.y-sign()*cellOffset)*scale,h*.82-p.z*scale];for(let z=0;z<=2;z+=.5){line(ctx,P,[{y:-2.5,z},{y:2.5,z}],'#233b4d');ctx.fillStyle='#8096aa';ctx.font='11px sans-serif';ctx.fillText(z.toFixed(1)+' m',5,h*.82-z*scale-3)}let mesh=currentCellGeometry(el.team.value,sign());line(ctx,P,[mesh.aperture[0],mesh.aperture[3]],'#ffe066',5);line(ctx,P,[mesh.back[0],mesh.back[3]],'#788898',2);line(ctx,P,[mesh.aperture[0],mesh.back[0]],'#788898',2);line(ctx,P,samples,'#69e5e0',2.5);ctx.fillStyle='#ffa04c';for(let e of insideResult?.events.slice(0,30)||[]){ctx.beginPath();ctx.arc(...P(e),3,0,2*Math.PI);ctx.fill()}let marker=collision||hit;if(marker){ctx.fillStyle=collision?'#ff5252':hit.inside?'#61e5a0':'#ff9273';ctx.beginPath();ctx.arc(...P(marker),5,0,2*Math.PI);ctx.fill()}}
-function draw(){drawScene();drawSide()}
+function draw(){drawScene();drawSide();drawCamera()}
+// Camera / fiducial localization (localization.js). The camera is fixed to the launcher, so the robot heading is the yaw input.
+const Loc=window.FiducialLocalizer,fieldTags=Loc?Loc.defaultTags():[],LEG_RADIUS=.0127,WALL_H=12*IN;
+const FRAME_LEGS=[-1,1].flatMap(sx=>[-1,1].map(sy=>[{x:sx*frameW/2,y:sy*frameD/2,z:0},{x:0,y:0,z:pivotZ}]));
+let vision=null,visionSeed=1,visionAim=null;
+const wrapDeg=a=>((a+180)%360+360)%360-180;
+function visionCamera(){return {mountHeight:num('camHeight'),pitchDeg:num('camPitch'),hfovDeg:num('camFov')}}
+function robotPose(){return {x:num('x'),y:num('y'),headingDeg:num('yaw')}}
+// A sight line is blocked by the HIVE frame legs or a CELL; samples 3 cm apart with a 1.6 cm probe leave no gaps in thin skins.
+function sightBlocked(a,b){let n=Math.ceil(Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)/.03),meshes=[];for(let name of ['red','blue'])for(let s of [-1,1])meshes.push(currentCellGeometry(name,s));
+ for(let i=1;i<n;i++){let q=i/n,p={x:a.x+(b.x-a.x)*q,y:a.y+(b.y-a.y)*q,z:a.z+(b.z-a.z)*q};
+  if(FRAME_LEGS.some(([u,v])=>segmentDistance2(p,u,v)<LEG_RADIUS**2))return true;if(p.z>.6&&cellCollision(p,meshes,.016))return true}return false}
+function updateVision(){if(!Loc){vision=null;return}
+ vision=Loc.localize({robot:robotPose(),camera:visionCamera(),tags:fieldTags,pixelNoise:Math.max(0,num('pixelNoise')),frames:clamp(Math.round(num('frames'))||1,1,20),seed:visionSeed,occluded:sightBlocked});renderVision()}
+function renderVision(){if(!visionResult)return;if(!vision){visionResult.innerHTML='';return}let d=T(),e=vision.estimate,r=robotPose(),pose=p=>`X=${p.x.toFixed(3)}, Y=${p.y.toFixed(3)} m, ${p.headingDeg.toFixed(2)}°`;
+ let rejected=Object.entries(vision.rejected.filter(j=>j.reason!=='behind').reduce((acc,j)=>{(acc[j.reason]=acc[j.reason]||[]).push(j.id);return acc},{})).map(([k,list])=>`${d.reasons[k]} ${list.join(',')}`).join(d.listSep);
+ let html=`${d.visionSeen(vision.detections.length,vision.detections.map(t=>t.id).join(', '))}`+(rejected?`<br>${d.visionRejected(rejected)}`:'');
+ if(e)html+=`<br><strong class="hit">${d.visionEst}</strong>${pose(e)}<br>${d.visionTruth}${pose(r)}<br>${d.visionErr((vision.error.position*100).toFixed(1),vision.error.headingDeg.toFixed(2))}`+(e.std?`<br>${d.visionStd((e.std.x*100).toFixed(1),(e.std.y*100).toFixed(1),e.std.headingDeg.toFixed(2))}`:'')+`<br>${d.visionRms(e.rmsPx.toFixed(2),vision.framesUsed)}`+(e.outlierTagIds.length?`<br>${d.visionOutliers(e.outlierTagIds.join(', '))}`:'');
+ else html+=`<br><strong class="miss">${d.visionNone}</strong>`;
+ visionResult.innerHTML=html}
+function visionAimText(){if(!visionAim)return '';let d=T();return `<br><span class="${visionAim.ok?'hit':'miss'}">${visionAim.ok?d.visionAimUsed(visionAim.cm,visionAim.deg):d.visionAimNone}</span>`}
+function drawCamera(){if(!cameraView||!vision)return;let {ctx,w,h}=resize(cameraView),cam=vision.camera,K=Loc.intrinsics(cam),pose=vision.cameraPose,k=w/cam.imageWidth;
+ ctx.fillStyle='#0b1522';ctx.fillRect(0,0,w,h);
+ const pix=c=>[(K.fx*c.x/c.z+K.cx)*k,(K.fy*c.y/c.z+K.cy)*k];
+ // Clip each segment at a near plane in front of the camera before projecting.
+ const seg=(a,b,color,width=1)=>{let ca=Loc.toCamera(a,pose),cb=Loc.toCamera(b,pose),near=.02;if(ca.z<near&&cb.z<near)return;
+  if(ca.z<near||cb.z<near){let q=(near-ca.z)/(cb.z-ca.z),m={x:ca.x+(cb.x-ca.x)*q,y:ca.y+(cb.y-ca.y)*q,z:near};if(ca.z<near)ca=m;else cb=m}
+  ctx.beginPath();ctx.moveTo(...pix(ca));ctx.lineTo(...pix(cb));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke()};
+ const poly=(pts,color,width=1)=>pts.forEach((p,i)=>seg(p,pts[(i+1)%pts.length],color,width));
+ for(let g=-FIELD_HALF;g<=FIELD_HALF+1e-9;g+=24*IN){seg({x:g,y:-FIELD_HALF,z:0},{x:g,y:FIELD_HALF,z:0},'#1f3346');seg({x:-FIELD_HALF,y:g,z:0},{x:FIELD_HALF,y:g,z:0},'#1f3346')}
+ let corners=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>({x:i*FIELD_HALF,y:j*FIELD_HALF}));
+ for(let z of [0,WALL_H])poly(corners.map(c=>({...c,z})),'#5d7690',1.5);corners.forEach(c=>seg({...c,z:0},{...c,z:WALL_H},'#5d7690',1.5));
+ FRAME_LEGS.forEach(([a,b])=>seg(a,b,'#b2bcc7',2));seg({x:-frameW/2,y:0,z:pivotZ},{x:frameW/2,y:0,z:pivotZ},'#d5dde5',2);
+ for(let name of ['red','blue'])for(let s of [-1,1]){let g=currentCellGeometry(name,s),color=name==='red'?'#fb666e':'#6ca9ff';poly(g.aperture,color,2);poly(g.back,color,1);g.aperture.forEach((p,i)=>seg(p,g.back[i],color,1))}
+ let detected=new Map(vision.detections.map(t=>[t.id,t])),rejected=new Map(vision.rejected.map(t=>[t.id,t.reason]));
+ for(let tag of fieldTags){let world=Loc.tagCorners(tag),cs=world.map(P=>Loc.toCamera(P,pose));if(cs.some(c=>c.z<.02))continue;
+  let hit=detected.get(tag.id),centre={x:tag.x,y:tag.y,z:tag.z},inner=world.map(P=>Loc.toCamera({x:centre.x+(P.x-centre.x)*.75,y:centre.y+(P.y-centre.y)*.75,z:centre.z+(P.z-centre.z)*.75},pose));
+  const fill=(pts,color)=>{ctx.beginPath();pts.forEach((c,i)=>ctx[i?'lineTo':'moveTo'](...pix(c)));ctx.closePath();ctx.fillStyle=color;ctx.fill()};
+  fill(cs,hit?'#f4f7fb':'#56667a');fill(inner,hit?'#111':'#2c3846');
+  if(hit){ctx.beginPath();hit.corners.forEach((q,i)=>ctx[i?'lineTo':'moveTo'](q.u*k,q.v*k));ctx.closePath();ctx.strokeStyle='#61e5a0';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#61e5a0';hit.corners.forEach(q=>{ctx.beginPath();ctx.arc(q.u*k,q.v*k,2.2,0,2*Math.PI);ctx.fill()})}
+  let top=pix(cs[3]);ctx.fillStyle=hit?'#61e5a0':'#8096aa';ctx.font='12px sans-serif';ctx.fillText(`#${tag.id}${hit?'':' · '+(T().reasons[rejected.get(tag.id)]||'')}`,top[0],top[1]-5)}
+ ctx.fillStyle='#8096aa';ctx.font='11px sans-serif';ctx.fillText(`${cam.imageWidth}×${cam.imageHeight} · HFOV ${cam.hfovDeg}° · fx ${K.fx.toFixed(0)} px`,8,h-8)}
+let cadVisionGroup=null,cadVisionRef=null;
+function refreshCadVision(){if(!cadVisionGroup||cadVisionRef===vision)return;cadVisionRef=vision;for(let child of [...cadVisionGroup.children]){cadVisionGroup.remove(child);child.geometry.dispose();child.material.dispose()}if(!vision)return;
+ const v=p=>new THREE.Vector3(p.x,p.z,p.y),lines=(pairs,color)=>{let geo=new THREE.BufferGeometry().setFromPoints(pairs.flat().map(v));cadVisionGroup.add(new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color})))};
+ let pose=vision.cameraPose,cam=vision.camera,K=Loc.intrinsics(cam),C=pose.C,far=.45;
+ let rays=[[0,0],[cam.imageWidth,0],[cam.imageWidth,cam.imageHeight],[0,cam.imageHeight]].map(([u,q])=>{let xn=(u-K.cx)/K.fx,yn=(q-K.cy)/K.fy;return {x:C.x+far*(pose.f.x+xn*pose.r.x+yn*pose.d.x),y:C.y+far*(pose.f.y+xn*pose.r.y+yn*pose.d.y),z:C.z+far*(pose.f.z+xn*pose.r.z+yn*pose.d.z)}});
+ lines([...rays.map(p=>[C,p]),...rays.map((p,i)=>[p,rays[(i+1)%4]])],0xffffff);
+ lines(vision.detections.map(t=>{let tag=fieldTags.find(g=>g.id===t.id);return [C,{x:tag.x,y:tag.y,z:tag.z}]}),0x61e5a0);
+ let e=vision.estimate;if(e){let a=e.headingDeg*Math.PI/180,p={x:e.x,y:e.y,z:C.z},mesh=new THREE.Mesh(new THREE.SphereGeometry(.03,12,8),new THREE.MeshBasicMaterial({color:0xff4fd8}));mesh.position.copy(v(p));cadVisionGroup.add(mesh);
+  lines([[p,{x:e.x+.35*Math.cos(a),y:e.y+.35*Math.sin(a),z:C.z}]],0xff4fd8)}}
+function tagTexture(id){let c=document.createElement('canvas');c.width=c.height=80;let ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,80,80);ctx.fillStyle='#000';ctx.fillRect(10,10,60,60);
+ // Illustrative 6×6 bit pattern seeded by the id; not a real AprilTag code.
+ let s=id*2654435761>>>0;ctx.fillStyle='#fff';for(let i=0;i<4;i++)for(let j=0;j<4;j++){s=Math.imul(s^s>>>13,1274126177)>>>0;if(s&1)ctx.fillRect(20+i*10,20+j*10,10,10)}return new THREE.CanvasTexture(c)}
+function initCadTags(){cadVisionGroup=new THREE.Group();cadWorld.add(cadVisionGroup);
+ for(let tag of fieldTags){let [a,b,c,d]=Loc.tagCorners(tag).map(p=>[p.x,p.z,p.y]),geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array([...a,...b,...c,...a,...c,...d]),3));
+  geo.setAttribute('uv',new THREE.BufferAttribute(new Float32Array([0,0,1,0,1,1,0,0,1,1,0,1]),2));cadWorld.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:tagTexture(tag.id),side:THREE.DoubleSide})))}}
 function openingMargin(p,m){let u=p.x-m.x,v=dot(sub(p,m),m.tangent),margin=Infinity;for(let i=0;i<outline.length;i++){let [ax,ay]=outline[i],[bx,by]=outline[(i+1)%outline.length],ex=bx-ax,ey=by-ay;margin=Math.min(margin,(ex*(v-ay)-ey*(u-ax))/Math.hypot(ex,ey))}return margin}
-function solve(){syncTeam();let originalA=el.angle.value,originalY=el.yaw.value,t=target(),goal=currentCellGeometry(el.team.value,sign()),best=null;
+function searchAim(){syncTeam();let t=target(),goal=currentCellGeometry(el.team.value,sign()),best=null;
  for(let [u,v] of [[0,0],[-.08,0],[.08,0],[0,-.06],[0,.06]]){let tx=t.x+u,ty=t.y+v*goal.tangent.y,yaw=Math.atan2(ty-num('y'),tx-num('x'))*180/Math.PI;el.yaw.value=yaw.toFixed(2);
   for(let a=10;a<=85;a+=.5){el.angle.value=a.toFixed(2);let r=integrate();if(!r.wall&&r.cross&&r.cross.inside&&r.inside?.retained){let margin=openingMargin(r.cross,goal);if(!best||margin>best.margin)best={a,yaw,margin}}}}
- if(best){el.angle.value=best.a.toFixed(2);el.yaw.value=best.yaw.toFixed(2);compute()}else{el.angle.value=originalA;el.yaw.value=originalY;compute();result.innerHTML+=`<br><span class="miss">${T().noSolution}</span>`}return best}
-ids.filter(id=>id!=='team'&&id!=='state').forEach(id=>el[id].addEventListener('input',compute));document.getElementById('aim').onclick=solve;document.getElementById('reset').onclick=()=>{azimuth=-.74;cameraDistance=3.4;sideZoom=1;draw()};document.getElementById('resetHive').onclick=()=>{if(playing)return;hives={red:newHive('red'),blue:newHive('blue')};Object.values(hives).forEach(settleStoredBalls);compute()};
+ return best}
+// With vision aim the search runs at the estimated pose. The robot turns by (field yaw − estimated heading), so the true
+// launch yaw also carries the heading error; the shot itself is simulated from the true position.
+function solve(){let originalA=el.angle.value,originalY=el.yaw.value,best=null;visionAim=null;
+ if(el.visionAim?.checked){updateVision();let e=vision?.estimate;
+  if(e){let trueX=el.x.value,trueY=el.y.value,heading=num('yaw');el.x.value=String(e.x);el.y.value=String(e.y);best=searchAim();el.x.value=trueX;el.y.value=trueY;el.yaw.value=originalY;
+   if(best)best.yaw=wrapDeg(best.yaw+heading-e.headingDeg);visionAim={ok:true,cm:(vision.error.position*100).toFixed(1),deg:vision.error.headingDeg.toFixed(2),estimate:{x:e.x,y:e.y,headingDeg:e.headingDeg},error:vision.error}}
+  else visionAim={ok:false}}
+ else best=searchAim();
+ if(best){el.angle.value=best.a.toFixed(2);el.yaw.value=best.yaw.toFixed(2)}else{el.angle.value=originalA;el.yaw.value=originalY}
+ if(visionAim)Object.assign(visionAim,{x:num('x'),y:num('y'),yaw:num('yaw'),angle:num('angle')});compute();
+ if(!best&&visionAim?.ok!==false)result.innerHTML+=`<br><span class="miss">${T().noSolution}</span>`;return best}
+ids.filter(id=>id!=='team'&&id!=='state').forEach(id=>el[id].addEventListener('input',compute));document.getElementById('aim').onclick=solve;document.getElementById('resample').onclick=()=>{visionSeed+=1;updateVision();draw()};document.getElementById('reset').onclick=()=>{azimuth=-.74;cameraDistance=3.4;sideZoom=1;draw()};document.getElementById('resetHive').onclick=()=>{if(playing)return;hives={red:newHive('red'),blue:newHive('blue')};Object.values(hives).forEach(settleStoredBalls);compute()};
 document.getElementById('play').onclick=()=>{if(playing||hives[el.team.value].moving)return;compute();playing=true;anim=0;let team=el.team.value,type=ballType(),success=Boolean(insideResult?.retained&&!collision),last=performance.now();document.getElementById('play').disabled=true;
  function tick(now){let dt=Math.min((now-last)/1000,.04);last=now;anim+=dt;let flightEnd=samples[samples.length-1].t;let lo=0,hi=samples.length-1;while(lo<hi){let mid=(lo+hi+1)>>1;if(samples[mid].t<=anim)lo=mid;else hi=mid-1}let p=samples[lo];
   if(anim>=flightEnd&&success){recordShot(team,type);success=false}
@@ -248,16 +338,22 @@ document.getElementById('play').onclick=()=>{if(playing||hives[el.team.value].mo
   if(cadShotBall){cadShotBall.visible=anim<flightEnd&&Boolean(p);if(cadShotBall.visible){cadShotBall.position.set(p.x,p.z,p.y);cadShotBall.scale.setScalar(num('diameter')/.071)}}draw();
   updateBalance();if(anim<flightEnd||Object.values(hives).some(h=>h.moving)){requestAnimationFrame(tick)}else{playing=false;if(cadShotBall)cadShotBall.visible=false;draw();document.getElementById('play').disabled=false}}
  requestAnimationFrame(tick)};
-function applyControlInput(input={}){if(playing)throw new Error('Wait for the current shot animation to finish');let map={x:'x',y:'y',z:'z',speed:'speed',angleDeg:'angle',yawDeg:'yaw',drag:'drag',releaseTorque:'threshold'};
+function applyControlInput(input={}){if(playing)throw new Error('Wait for the current shot animation to finish');let map={x:'x',y:'y',z:'z',speed:'speed',angleDeg:'angle',yawDeg:'yaw',drag:'drag',releaseTorque:'threshold',cameraHeight:'camHeight',cameraPitchDeg:'camPitch',cameraFovDeg:'camFov',pixelNoise:'pixelNoise',frames:'frames'};
  for(let [key,id] of Object.entries(map))if(input[key]!==undefined){if(typeof input[key]!=='number'||!Number.isFinite(input[key]))throw new TypeError(`${key} must be a finite number`);el[id].value=String(input[key])}
+ if(input.useVision!==undefined)el.visionAim.checked=Boolean(input.useVision);
+ if(input.seed!==undefined){if(!Number.isInteger(input.seed))throw new TypeError('seed must be an integer');visionSeed=input.seed}
  if(input.ballType!==undefined){if(!['pollen','nectar'].includes(input.ballType))throw new TypeError('ballType must be pollen or nectar');el.diameter.value=input.ballType==='pollen'?'0.071':'0.091'}
  syncTeam()}
+function controlVision(){let v=vision;return v?{truth:robotPose(),estimate:v.estimate&&{x:v.estimate.x,y:v.estimate.y,headingDeg:v.estimate.headingDeg,std:v.estimate.std,rmsPx:v.estimate.rmsPx,outlierTagIds:v.estimate.outlierTagIds},
+ error:v.error,detectedTagIds:v.detections.map(t=>t.id),rejected:v.rejected,framesUsed:v.framesUsed,detections:JSON.parse(JSON.stringify(v.detections))}:null}
 function controlState(){syncTeam();return {units:{position:'m',speed:'m/s',angle:'deg',torque:'N·m',time:'s'},nearestHive:el.team.value,targetCellSide:sign(),target:target(),hives:JSON.parse(JSON.stringify(hives))}}
 function controlPrediction(){let status=collision?'collision':insideResult?.retained?'hit':'miss';return {status,team:el.team.value,cellSide:sign(),angleDeg:num('angle'),yawDeg:num('yaw'),speed:num('speed'),ballType:ballType(),dragCoefficient:num('drag'),flightTime:hit?.t??collision?.t??null,hitPoint:hit?{x:hit.x,y:hit.y,z:hit.z}:null,collision:collision?{kind:collision.kind,x:collision.x,y:collision.y,z:collision.z,t:collision.t}:null,internalCollisions:insideResult?.events.map(e=>({kind:e.kind,t:e.t,x:e.x,y:e.y,z:e.z}))??[],retained:insideResult?.retained??false,target:target()}}
 window.HiveControl={
  getState:controlState,
  predict(input={}){applyControlInput(input);compute();return controlPrediction()},
- solve(input={}){applyControlInput(input);let solution=solve();return solution?{...controlPrediction(),openingClearance:solution.margin}: {status:'unreachable',team:el.team.value,cellSide:sign(),target:target()}},
+ solve(input={}){applyControlInput(input);let solution=solve(),visionInfo=visionAim&&{ok:visionAim.ok,estimate:visionAim.estimate??null,error:visionAim.error??null};return solution?{...controlPrediction(),openingClearance:solution.margin,vision:visionInfo}: {status:'unreachable',team:el.team.value,cellSide:sign(),target:target(),vision:visionInfo}},
+ localize(input={}){applyControlInput(input);compute();return controlVision()},
+ getTags(){return JSON.parse(JSON.stringify(fieldTags))},
  fire(input={}){applyControlInput(input);compute();let prediction=controlPrediction(),tipped=false;if(prediction.status==='hit'){let h=hives[el.team.value];recordShot(el.team.value,prediction.ballType);for(let i=0;i<5000&&h.moving;i++)tipped=stepHive(h,.005)||tipped;compute()}return {shot:prediction,tipped,state:controlState()}},
  reset(){if(playing)throw new Error('Cannot reset while a shot is animating');hives={red:newHive('red'),blue:newHive('blue')};Object.values(hives).forEach(settleStoredBalls);compute();return controlState()}
 };
@@ -284,6 +380,8 @@ function keyDown(e){let tag=e.target&&e.target.tagName;if(e.ctrlKey||e.metaKey||
  if(code==='Enter'){e.preventDefault?.();if(!e.repeat&&!playing)solve();return}
  if(code==='KeyB'){if(!e.repeat&&!playing){el.diameter.value=el.diameter.value==='0.071'?'0.091':'0.071';compute()}return}
  if(code==='KeyC'){if(!e.repeat)document.getElementById('reset').onclick();return}
+ if(code==='KeyV'){if(!e.repeat&&!playing&&el.visionAim){el.visionAim.checked=!el.visionAim.checked;compute()}return}
+ if(code==='KeyN'){if(!e.repeat)document.getElementById('resample').onclick();return}
  if(!(code in KEY_RATES)&&!MOVE_KEYS.includes(code)&&!(code in ORBIT_KEYS))return;
  e.preventDefault?.();if(!held.has(code)&&!e.repeat&&code in KEY_RATES&&!playing){let [id,,tap]=KEY_RATES[code];setControl(id,num(id)+tap*(shiftHeld?5:1))}
  if(!held.has(code))held.set(code,clock());startKeyLoop()}

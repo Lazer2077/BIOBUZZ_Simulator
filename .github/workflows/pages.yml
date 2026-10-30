@@ -23,6 +23,7 @@ jobs:
         with:
           node-version: 22
       - run: node collision.test.js
+      - run: node localization.test.js
 
   deploy:
     needs: test
@@ -35,7 +36,7 @@ jobs:
       - name: Collect site files
         run: |
           mkdir -p _site/cad
-          cp -r index.html vendor _site/
+          cp -r index.html localization.js vendor _site/
           cp cad/hive-mesh.js _site/cad/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5

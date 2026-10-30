@@ -22,6 +22,8 @@ Keys work when no input box has focus (click the 3D view or blank space first). 
 | Enter | Solve angle | — |
 | Space | Launch one ball | — |
 | C | Reset view | — |
+| V | Toggle vision aim | — |
+| N | Resample camera noise | — |
 
 ## Model dimensions
 
@@ -40,6 +42,19 @@ Free flight integrates gravity and quadratic drag `F = ρ Cd A |v|² / 2` in 5 m
 At the start of an official match each upward CELL holds 3 NECTAR, placed against the back wall in a line along the side nearest that alliance's ALLIANCE AREA (manual §10.3.1: red toward −X, blue toward +X). The simulator shows these starting balls and treats them as the balance baseline; each later ball adds torque based on its AndyMark mass. When the added torque reaches the release threshold set in the page, the HIVE falls to its other stable pose following a simplified equation with moment of inertia, restoring force and damping; the other CELL then faces up and becomes the new target. After a tip, the balls in the original CELL are removed from the count.
 
 **Calibration limits:** the FIRST manual does not give the tip torque, moment of inertia, damping, ball contact stiffness or NECTAR drag coefficient; all of these defaults are placeholders. Balls are modelled as lumped masses with compressible contact; shell deformation is not solved with finite elements and CELL flexibility is not modelled. Ball-to-ball contact is included while settling, but an incoming ball does not yet collide dynamically with balls already in the CELL, so retention predictions for a full CELL are still approximate. Measure real retention rates, tip timing and the number of balls needed on a physical field and adjust the parameters. See [NASA](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/drag-equation/) for the drag equation; drag on perforated balls is sensitive to hole size and porosity, see the [floorball ball experiments](https://odr.chalmers.se/items/dc68b2a3-48e5-4090-bb6b-023005930f18) and the [wind-tunnel study of perforated hollow spheres](https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/drag-on-a-hollow-sphere-can-increase-with-porosity/96AC0BED872B41FDE7C447214028BA77).
+
+## Camera / AprilTag localization
+
+`localization.js` simulates a robot camera that sees fiducial tags on the field walls and estimates the robot pose `(x, y, heading)` from them. The page loads it as `window.FiducialLocalizer`; in Node it is a CommonJS module. It does not depend on the rest of the simulator.
+
+- **Tag layout (placeholder):** three 6.5 in tags on each perimeter wall at x or y = −1.2, 0 and 1.2 m, centred 0.2 m above the tiles, facing into the field, IDs 1–12. The BIOBUZZ tag positions and size were not available when this was written, so edit `defaultTags` and `TAG_SIZE` to match the official field drawings. The tag pattern drawn on the page is illustrative, not a real AprilTag code.
+- **Camera:** pinhole model, 640×480, no lens distortion, mounted on the launcher, so the robot heading equals the yaw input. Height, pitch and horizontal FOV are set in the page. The detector rejects a tag that is behind the camera, beyond 4.5 m, viewed more than 75° off its normal, partly outside the image, under 10 px on a side, or occluded (sight line through a HIVE frame leg or a CELL). It then adds Gaussian noise σ to each corner pixel.
+- **Initial pose (closed form):** the two vertical edges of each tag have a known length, so the elevation difference between the rays to their ends gives each edge's horizontal range, independent of camera height. These edge points are registered to their field positions with a 2D Procrustes fit.
+- **Refinement:** Levenberg–Marquardt over `(x, y, heading)` on the reprojection error of all corners of all tags, with Huber weights. When at least 3 tags are seen, a tag with reprojection RMS over 4 px is dropped as an outlier and the solve repeats. The 1σ comes from `s²(JᵀJ)⁻¹`; over many noise samples the normalized error RMS is about 1, so the reported uncertainty matches the actual error.
+- **Multi-frame fusion:** a 3-state Kalman filter (`createPoseFilter`) fuses frames using each frame's full covariance and can also take robot-frame odometry through `predict`.
+- **Vision aim:** with "Aim using the vision pose estimate" ticked (key V), *Solve angle* runs the search at the estimated position. The robot turns by (field yaw − estimated heading), so the heading error also reaches the true launch yaw. The shot is still simulated from the true position, which shows how localization error affects scoring.
+
+Camera height, pitch and tag positions are assumed known exactly; calibrate them on the robot. The model does not include motion blur, rolling shutter, lighting, lens distortion or false detections.
 
 ## Control API
 
@@ -64,10 +79,13 @@ Methods:
 - `solve({...})`: searches for a collision-free angle for the given launch point, speed and ball type; returns `unreachable` if none exists.
 - `fire({...})`: performs one launch with the current parameters; a hit adds the ball, and the HIVE advances to its next stable pose once the threshold is reached. The API computes this instantly; the page button animates it.
 - `reset()`: restores the official starting orientation with 3 NECTAR per HIVE.
+- `localize({...})`: runs the camera at the given pose (`x`, `y`, `yawDeg` as the heading) and returns the true and estimated pose, the error, 1σ, the detected tag IDs and the rejection reasons. It also accepts `cameraHeight`, `cameraPitchDeg`, `cameraFovDeg`, `pixelNoise`, `frames` and an integer `seed`.
+- `solve({..., useVision: true})`: aims from the vision estimate; the result's `vision` field gives the estimate and its error.
+- `getTags()`: the tag layout in use.
 
 Collision `kind` values returned by the API (`封闭背板` closed back panel, `侧面` side panel, `开口边框` opening rim, `内壁 n` inner wall n) are fixed identifiers and do not change with the page language.
 
-Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API, the Chinese and English page text and the keyboard controls.
+Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API, vision aiming, the Chinese and English page text and the keyboard controls. Run `node localization.test.js` to check exact pose recovery without noise, covariance calibration, multi-frame fusion, outlier rejection and the detector's rejection reasons.
 
 ## Check against official sources (2026-27 Competition Manual TU02)
 
