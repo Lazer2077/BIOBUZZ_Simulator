@@ -16,13 +16,13 @@ function undistort(xd,yd,cam){let x=xd,y=yd;if(!cam.k1&&!cam.k2)return [x,y];for
 // Scene primitives are built once per frame. Each has a screen bounding box so most samples skip it cheaply.
 function buildScene({tags,patterns,polygons=[],cylinders=[]}){let prims=[];
  for(const tag of tags){let pattern=patterns&&patterns(tag.id);if(!pattern)continue;
-  let a=tag.yawDeg*DEG,n={x:Math.cos(a),y:Math.sin(a),z:0},r={x:-n.y,y:n.x,z:0},outer=tag.size*pattern.width/(pattern.width-2),c={x:tag.x+n.x*.001,y:tag.y+n.y*.001,z:tag.z};
-  prims.push({kind:'tag',c,n,r,up:{x:0,y:0,z:1},half:outer/2,pattern,box:quadPoints(c,r,outer/2)})}
+  let {n,r,u}=L.tagFrame(tag),outer=tag.size*pattern.width/(pattern.width-2),c={x:tag.x+n.x*.001,y:tag.y+n.y*.001,z:tag.z+n.z*.001};
+  prims.push({kind:'tag',c,n,r,up:u,half:outer/2,pattern,box:quadPoints(c,r,u,outer/2)})}
  for(const poly of polygons){let p=poly.points,e1=sub(p[1],p[0]),e2=sub(p[2],p[0]),n=norm(cross(e1,e2));prims.push({kind:'poly',p,n,d:dot(n,p[0]),albedo:poly.albedo,box:p})}
  for(const cyl of cylinders){let axis=sub(cyl.b,cyl.a),len=Math.hypot(axis.x,axis.y,axis.z);prims.push({kind:'cyl',a:cyl.a,axis:{x:axis.x/len,y:axis.y/len,z:axis.z/len},len,radius:cyl.radius,albedo:cyl.albedo,box:[cyl.a,cyl.b]})}
  return prims}
 const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z}),dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z,cross=(a,b)=>({x:a.y*b.z-a.z*b.y,y:a.z*b.x-a.x*b.z,z:a.x*b.y-a.y*b.x}),norm=a=>{let l=Math.hypot(a.x,a.y,a.z);return {x:a.x/l,y:a.y/l,z:a.z/l}};
-function quadPoints(c,r,h){return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>({x:c.x+r.x*h*i,y:c.y+r.y*h*i,z:c.z+h*j}))}
+function quadPoints(c,r,u,h){return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>({x:c.x+(r.x*i+u.x*j)*h,y:c.y+(r.y*i+u.y*j)*h,z:c.z+(r.z*i+u.z*j)*h}))}
 const LIGHT=norm({x:.3,y:.5,z:1});
 
 // Albedo of what a world ray hits (0–1), or the dim arena background.
@@ -33,7 +33,7 @@ function shade(O,D,prims,active){let best=Infinity,albedo=.16+.06*Math.max(0,D.z
  for(const [ax,s] of [['x',1],['x',-1],['y',1],['y',-1]]){let o=O[ax],d=D[ax];if(Math.abs(d)<1e-12)continue;let t=(s*FIELD_HALF-o)/d;if(t<=1e-6||t>=best)continue;
   let p={x:O.x+D.x*t,y:O.y+D.y*t,z:O.z+D.z*t},other=ax==='x'?p.y:p.x;if(p.z<0||p.z>WALL_H||Math.abs(other)>FIELD_HALF)continue;best=t;albedo=.62;hitN={x:ax==='x'?-s:0,y:ax==='y'?-s:0,z:0}}
  for(let m=0;m<active.count;m++){let pr=prims[active[m]];
-  if(pr.kind==='tag'){let den=dot(D,pr.n);if(den>=0)continue;let t=dot(sub(pr.c,O),pr.n)/den;if(t<=0||t>=best)continue;let q=sub({x:O.x+D.x*t,y:O.y+D.y*t,z:O.z+D.z*t},pr.c),u=dot(q,pr.r)/pr.half,v=q.z/pr.half;
+  if(pr.kind==='tag'){let den=dot(D,pr.n);if(den>=0)continue;let t=dot(sub(pr.c,O),pr.n)/den;if(t<=0||t>=best)continue;let q=sub({x:O.x+D.x*t,y:O.y+D.y*t,z:O.z+D.z*t},pr.c),u=dot(q,pr.r)/pr.half,v=dot(q,pr.up)/pr.half;
    if(Math.abs(u)>1||Math.abs(v)>1)continue;let w=pr.pattern.width,i=Math.min(w-1,Math.floor((u+1)/2*w)),j=Math.min(w-1,Math.floor((1-v)/2*w));best=t;hitN=pr.n;albedo=pr.pattern.data[j*w+i]?.9:.05}
   else if(pr.kind==='poly'){let den=dot(D,pr.n);if(Math.abs(den)<1e-12)continue;let t=(pr.d-dot(O,pr.n))/den;if(t<=1e-6||t>=best)continue;let p={x:O.x+D.x*t,y:O.y+D.y*t,z:O.z+D.z*t},inside=true,sign=0;
    for(let i=0;i<pr.p.length&&inside;i++){let a=pr.p[i],b=pr.p[(i+1)%pr.p.length],s=dot(cross(sub(b,a),sub(p,a)),pr.n);if(Math.abs(s)<1e-12)continue;if(!sign)sign=Math.sign(s);else if(Math.sign(s)!==sign)inside=false}
@@ -87,20 +87,19 @@ function createDetector(Module){Module._at_init();let cache=new Map();
 // the pose; with several frames (robot static, fresh sensor noise each) the estimates are fused by the Kalman filter.
 // Corner bias from rendering and the detector's edge fit (about 0.2–0.3 px here) is common to all frames, so it is
 // added to the covariance after fusion instead of averaging away.
-function localizeFromImage({detector,robot,camera,tags=L.defaultTags(),layout=tags,use='all',polygons,cylinders,effects,detectorOptions,frames=1,maxHamming=0,minDecisionMargin=10,cornerBiasPx=.3}){
- let t0=now(),frame=render({robot,camera,tags,patterns:id=>detector.pattern(id),polygons,cylinders,effects}),renderMs=now()-t0,cam=frame.camera,K=L.intrinsics(cam),known=new Set(layout.map(t=>t.id));
- let filter=L.createPoseFilter(),last=null,framesUsed=0,detectMs=0,bias=null,mapTags=null;
+function localizeFromImage({detector,robot,camera,tags=L.defaultTags(),layouts=[{tags}],polygons,cylinders,effects,detectorOptions,frames=1,maxHamming=0,minDecisionMargin=10,cornerBiasPx=.3}){
+ let t0=now(),frame=render({robot,camera,tags,patterns:id=>detector.pattern(id),polygons,cylinders,effects}),renderMs=now()-t0,cam=frame.camera,K=L.intrinsics(cam),known=new Set(layouts[0].tags.map(t=>t.id));
+ let filter=L.createPoseFilter(),last=null,framesUsed=0,detectMs=0,bias=null,chosen=null;
  for(let k=0;k<Math.max(1,frames|0);k++){let gray=k?sensor(frame.radiance,frame.effects,frame.effects.seed+k*7919):frame.gray,t1=now(),raw=detector.detect(gray,frame.width,frame.height,detectorOptions),accepted=[],rejected=[];detectMs+=now()-t1;
   for(const d of raw){let reason=!known.has(d.id)?'unknown':d.hamming>maxHamming?'hamming':d.decisionMargin<minDecisionMargin?'margin':null;if(reason){rejected.push({id:d.id,reason,decisionMargin:d.decisionMargin,corners:d.corners});continue}
    let corners=d.corners.map(q=>undistort((q.u-K.cx)/K.fx,(q.v-K.cy)/K.fy,cam));if(corners.some(c=>!c)){rejected.push({id:d.id,reason:'margin',decisionMargin:d.decisionMargin,corners:d.corners});continue}
    accepted.push({...d,corners:corners.map(([x,y])=>({u:x*K.fx+K.cx,v:y*K.fy+K.cy})),rawCorners:d.corners})}
-  if(!mapTags)mapTags=L.selectTags(layout,use,accepted.map(d=>d.id));let used=new Set(mapTags.map(t=>t.id));
-  for(const d of accepted.filter(d=>!used.has(d.id)))rejected.push({id:d.id,reason:'unused',decisionMargin:d.decisionMargin,corners:d.rawCorners});accepted=accepted.filter(d=>used.has(d.id));
-  let e=L.estimate(accepted,{camera:cam,tags:mapTags,minPixelSigma:cornerBiasPx});if(e){filter.update({...e,covariance:e.covariance.map((row,i)=>row.map((v,j)=>v-e.biasCovariance[i][j]))});framesUsed++;if(!bias)bias=e.biasCovariance}if(!k)last={gray,detections:accepted,rejected,estimate:e}}
+  let e;if(!chosen){let best=L.estimateBest(accepted,{camera:cam,layouts,minPixelSigma:cornerBiasPx});chosen=best&&best.layout;e=best&&best.estimate}
+  else e=L.estimate(accepted,{camera:cam,tags:chosen.tags,minPixelSigma:cornerBiasPx});if(e){filter.update({...e,covariance:e.covariance.map((row,i)=>row.map((v,j)=>v-e.biasCovariance[i][j]))});framesUsed++;if(!bias)bias=e.biasCovariance}if(!k)last={gray,detections:accepted,rejected,estimate:e}}
  let fused=filter.state,covariance=fused&&fused.covariance.map((row,i)=>row.map((v,j)=>v+bias[i][j]));
  let estimate=fused&&{...last.estimate,x:fused.x,y:fused.y,headingDeg:fused.headingDeg,covariance,std:{x:Math.sqrt(covariance[0][0]),y:Math.sqrt(covariance[1][1]),headingDeg:Math.sqrt(covariance[2][2])/DEG}};
  if(estimate&&!last.estimate)estimate={...estimate,rmsPx:NaN,tagIds:[],outlierTagIds:[]};
- return {frame:{...frame,gray:last.gray},mapTagIds:mapTags.map(t=>t.id),detections:last.detections,rejected:last.rejected,estimate,framesUsed,camera:cam,cameraPose:L.cameraPose(robot,cam),timing:{renderMs,detectMs:detectMs/Math.max(1,frames|0)},
+ return {frame:{...frame,gray:last.gray},hiveUp:chosen&&chosen.hiveUp,detections:last.detections,rejected:last.rejected,estimate,framesUsed,camera:cam,cameraPose:L.cameraPose(robot,cam),timing:{renderMs,detectMs:detectMs/Math.max(1,frames|0)},
   error:estimate?{x:estimate.x-robot.x,y:estimate.y-robot.y,position:Math.hypot(estimate.x-robot.x,estimate.y-robot.y),headingDeg:((estimate.headingDeg-robot.headingDeg+540)%360)-180}:null}}
 const now=()=>typeof performance!=='undefined'?performance.now():Date.now();
 

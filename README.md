@@ -46,50 +46,50 @@ At the start of an official match each upward CELL holds 3 NECTAR, placed agains
 
 ## Camera / AprilTag localization
 
-The simulator localizes the robot from a camera that sees AprilTags on the field walls. The pipeline matches what runs on an FTC robot: an image goes through the AprilTag detector, the detector's corners go into a pose solver, and the result is checked before it is used.
+The simulator localizes the robot from a camera that sees the field AprilTags. The pipeline matches what runs on an FTC robot: an image goes through the AprilTag detector, the detector's corners go into a pose solver, and the result is checked before it is used.
 
 ```
-render camera frame ─► AprilRobotics detector ─► filter decodes ─► undistort corners ─► closed-form initial pose
- (camera-render.js)     (vendor/apriltag-wasm.js)   (hamming, margin)   (known k1)           (edge ranges + 2D Procrustes)
+render camera frame ─► AprilRobotics detector ─► filter decodes ─► undistort corners ─► heading-scan initial pose
+ (camera-render.js)     (vendor/apriltag-wasm.js)   (hamming, margin)   (known k1)           (per HIVE-pose hypothesis)
                                                                                                    │
  vision aim ◄─ quality gate (blur, lone far tag) ◄─ multi-frame Kalman fusion ◄─ LM on corner reprojection error, outlier tags removed
 ```
 
-| Shooting pose: frame tags 13 and 14 aim the shot, error 0.1 cm | Near the HIVE: frame tags 15 and 16 | A leg hides tag 14; tag 13 alone, error 0.8 cm |
+### Tag layout (Competition Manual TU07 §9.9)
+
+- Sixteen 3.25 in (8.25 cm) tag36h11 tags, in four AprilTag Clusters of four on one sticker each. Each cluster is on the **bottom face of a CELL** (the outside of its back panel), facing out of the CELL, with the sticker's bottom edge toward the field centre (Figure 9-16).
+- Within a cluster the tag centres are ±2.75 in and ±6.5 in from the cluster centre (Figure 9-15). The reference holes are 9.938 in from the CELL's front edge and the tag centreline 2.75 in above them, which puts the tags 0.19 in from the panel middle.
+- IDs (Figure 9-17): red CELL away from the audience 30–33, red audience CELL 34–37, blue audience CELL 38–41, blue CELL away from the audience 42–45.
+- The tags **tip with their HIVE**. An upward CELL's cluster faces down and toward the centre. The downward CELL's cluster faces outward and slightly up. A robot shooting into an upward CELL therefore sees the clusters on the other CELL of each HIVE: from the +Y side, 30–33 and 42–45 at the start.
+- Since the tag positions depend on how each HIVE is tipped, the solver fits all four HIVE-pose combinations and keeps the one that explains the corners best. It also reports which CELLs are up; a HIVE with no tag in view stays unknown.
+- The simulator's +Y is the audience side. In Figure 9-17 the starting NECTAR, which sit in the upward CELLs, are in the red audience CELL and the blue CELL away from the audience; here those are red +Y and blue −Y. The simulator frame is therefore a mirror image of the field in Y. Tag IDs follow the figure's left-to-right order along X, and each tag is drawn readable from in front.
+
+| Red shot, 640×480, decimate 1: tags 30 and 45, aim error 0.12° | Same, 1280×800, decimate 2: 30–33 and 45, aim error 0.09° | 640×480 with decimate 2: only tag 45, rejected by the gate |
 |---|---|---|
-| ![](docs/images/camera-shooting.png) | ![](docs/images/camera-hive.png) | ![](docs/images/camera-occlusion.png) |
-| **Turning at 60°/s: 3.8 px of blur, 2 tags lost, rejected by the gate** | **80° lens with k1 = −0.25: undistorted with the calibration, error 0.1 cm** | **Exposure ×0.3 and noise σ = 8: still decodes, error 0.3 cm** |
-| ![](docs/images/camera-turn60.png) | ![](docs/images/camera-wide-distortion.png) | ![](docs/images/camera-dark-noisy.png) |
+| ![](docs/images/camera-red-shot.png) | ![](docs/images/camera-red-shot-1280.png) | ![](docs/images/camera-red-shot-decimate2.png) |
+| **Blue shot: 37, 38, 41, error 0.4 cm** | **After the red HIVE tips: shooting from −Y, red −Y up detected, aim error 0.001°** | **Turning at 60°/s: one tag left, 10 cm error, rejected by the gate** |
+| ![](docs/images/camera-blue-shot.png) | ![](docs/images/camera-after-tip.png) | ![](docs/images/camera-turn60.png) |
 
-Green: accepted detections (raw corners; m is the decision margin). Orange: discarded decodes, including wall tags left out because the frame tags are used. Red dashed: in view geometrically but missed by the detector.
+Green: accepted detections (raw corners; m is the decision margin). Orange: discarded decodes. Red dashed: in view geometrically but missed by the detector.
 
-### HIVE frame tags for aiming
+**The tags are small.** At 2 m a 3.25 in tag spans about 15–20 px in a 640×480, 70° image, and it is seen at a steep angle. With the detector's `quad_decimate` 2, almost none decode at 640×480. Use `decimate` 1 (the page default; detection takes about 45 ms in WASM) or a 1280×720/800 camera with decimate 2.
 
-Besides the 12 wall tags (IDs 1–12), each of the four HIVE frame legs carries a tag facing its shooting side (IDs 13–16, 0.45 m above the tiles, on a plate standing clear of the leg, below the CELLs so a low camera sees them). The frame does not tip, and these tags sit on the target itself, so they measure what aiming needs, the bearing and range to the HIVE, without depending on where the walls are relative to the HIVE.
+- **Detector:** the [AprilRobotics apriltag](https://github.com/AprilRobotics/apriltag) C library, the library under the FTC SDK AprilTagProcessor, compiled to WebAssembly with family tag36h11, `quad_decimate` settable (default 1 here), `refine_edges` on and one thread. The page and the 3D view use the library's own tag36h11 images. `tools/apriltag-wasm/build.sh` rebuilds `vendor/apriltag-wasm.js` (one 184 KB file; license in `vendor/APRILTAG-LICENSE.txt`). Decodes with hamming > 0, decision margin < 10 or an ID outside 30–45 are discarded.
+- **Rendered frame (`camera-render.js`):** a software ray caster renders a 640×480, 1280×720 or 1280×800 grayscale image of the tiles and seams, the perimeter walls, the tags (black square plus the white ring), the CELL panels and the HIVE frame legs and crossbar. 640×480 uses 2×2 supersampling. Optional effects: motion blur (sub-frames over the exposure from the forward speed and turn rate), Brown–Conrady radial distortion `k1` (outside the lens image circle stays black), defocus blur, exposure gain and Gaussian sensor noise. A frame renders in about 0.4–0.9 s in the browser, so the page re-renders 180 ms after the last change. "Geometry + corner noise" mode (key M) skips rendering and is instant.
+- **Pose solver (`localization.js`):** detector corners are undistorted with the known calibration.
+  - **Initial pose:** the tags are tilted, so this works for any tag orientation. With the camera height and pitch known, a heading fixes every corner's viewing ray. The camera position then follows from a linear least-squares fit of those rays through the known corners. The heading is scanned in 2° steps and narrowed by golden-section search, which is exact without noise, even from one tag.
+  - **Refinement:** Levenberg–Marquardt minimizes the corner reprojection error over `(x, y, heading)` with Huber weights. With 3 or more tags, a tag whose RMS exceeds 4 px is removed and the solve repeats.
+  - **Uncertainty:** the 1σ comes from `s²(JᵀJ)⁻¹`. In image mode it also includes a 0.3 px per-corner bias floor that frame averaging does not remove.
+  - **Fusion:** several frames (fresh sensor noise each, robot static) are fused with a Kalman filter that also takes odometry.
+- **Quality gate:** an estimate is not used in two cases. One is when the expected motion blur `fx·|ω|·T + fx·|v|·T/1.5` exceeds 2 px. The other is when only one tag is seen and it is more than 1.5 m away. The reprojection residual does not reveal either failure.
+- **Vision aim:** tick "Aim using the vision pose estimate" (key V). *Solve angle* then uses an estimate only if it passes the gate. The search runs at the estimated position, the robot turns by (field yaw − estimated heading), and the shot is simulated from the true position. The result panel reports the **aim error**: the launch-direction error, the sideways miss it causes at the target, and the range error.
 
-"Tags used to localize" chooses **Auto** (default: frame tags alone whenever any is in view, otherwise all), **All**, **Walls only** or **Frame only**. "Wall tag position error vs HIVE" shifts each wall tag along and across its wall by N(0, σ) and turns it by N(0, 20°/m·σ), standing in for field assembly tolerance and HIVE placement; the solver still uses the nominal layout. The result panel reports the **aim error**: the launch-direction error the robot would turn with, the sideways miss it causes at the target, and the range error.
-
-Six shooting positions facing their target, 0.5 px corner noise (geometry mode, 8 seeds each) or the rendered frame (image mode, 2 seeds), 3 frames fused:
-
-| Wall tag error | Auto: aim error RMS / max | Walls only: aim error RMS / max | Vision-aimed shots scoring, Auto vs walls only |
-|---|---|---|---|
-| 0 cm | 0.03° / 0.09° | 0.62° / 1.96° | 24/24 vs 24/24 (image 12/12 vs 10/12) |
-| 2 cm | 0.03° / 0.09° | 5.7° / 17° | 24/24 vs 17/24 (image 12/12 vs 6/12) |
-| 5 cm | 0.03° / 0.06° | 13° / 38° | 24/24 vs 5/24 (image 12/12 vs 2/12) |
-
-Walls alone do poorly when shooting because the camera faces the HIVE: the wall tags it sees are 3–4 m away on the far wall, nearly in a line, so heading and sideways position are hard to separate and small layout errors turn into degrees of aim error. Mixing all tags is not a safe fix either: at 5 cm wall error the outlier check sometimes dropped the frame tags instead, giving up to 13°. Hence the Auto rule.
-
-Tag height matters more than horizontal position: with the camera close to tag height the solver gets range from elevation, so a height error of a few cm on a 0.1 m height difference shifts the range by tens of percent. Mount the camera well above or below the tags, and measure tag heights carefully.
-
-- **Detector:** the [AprilRobotics apriltag](https://github.com/AprilRobotics/apriltag) C library, the library under the FTC SDK AprilTagProcessor, compiled to WebAssembly with family tag36h11, `quad_decimate` 2 (settable), `refine_edges` on and one thread. The page and the 3D view use the library's own tag36h11 images. `tools/apriltag-wasm/build.sh` rebuilds `vendor/apriltag-wasm.js` (one 184 KB file; license in `vendor/APRILTAG-LICENSE.txt`). Decodes with hamming > 0, decision margin < 10 or an ID outside the layout are discarded.
-- **Rendered frame (`camera-render.js`):** a software ray caster renders a 640×480 grayscale image of the tiles and seams, perimeter walls, tags (6.5 in black square plus the white ring), the CELL panels and the HIVE frame legs and crossbar, with 2×2 supersampling. Optional effects: motion blur (sub-frames over the exposure from the forward speed and turn rate), Brown–Conrady radial distortion `k1` (outside the lens image circle stays black), defocus blur, exposure gain and Gaussian sensor noise. A frame renders in about 0.4–0.9 s in the browser, so the page re-renders 180 ms after the last change; "Geometry + corner noise" mode (key M) skips rendering and is instant.
-- **Pose solver (`localization.js`):** detector corners are undistorted with the known calibration. The closed-form initial pose uses each tag's vertical edges: the elevation difference between the rays to an edge's two ends gives its horizontal range without needing the camera height, and the edge points are registered to their field positions with a 2D Procrustes fit. Levenberg–Marquardt then minimizes the corner reprojection error over `(x, y, heading)` with Huber weights; with 3 or more tags, a tag whose RMS exceeds 4 px is removed and the solve repeats. The 1σ comes from `s²(JᵀJ)⁻¹`; in image mode it also includes a 0.3 px per-corner bias floor that frame averaging does not remove, and across test poses the actual error stays within about 1σ. Several frames (fresh sensor noise each, robot static) are fused with a Kalman filter that also takes odometry.
-- **Quality gate:** an estimate is not used when the expected motion blur `fx·|ω|·T + fx·|v|·T/1.5` exceeds 2 px, or when only one tag farther than 1.5 m is seen. Both are failure modes the residual does not reveal: in testing, a single blurred tag 3.6 m away gave errors near 50 cm while reporting a 1σ of about 16 cm.
-- **Vision aim:** with "Aim using the vision pose estimate" ticked (key V), *Solve angle* uses an estimate only if it passes the gate. The search runs at the estimated position, the robot turns by (field yaw − estimated heading), and the shot is simulated from the true position.
-
-Typical results with the default 640×480, 70° camera at 0.30 m: static 0.1–1.4 cm and under 0.2°; at 120°/s within an 8 ms exposure the distant wall tags no longer decode (a large nearby frame tag can, but the gate rejects the estimate).
-
-Limits: tag positions and size are placeholders (edit `wallTags`, `frameTags` and `TAG_SIZE` in `localization.js` to match the official field). Lighting is a single directional light with no shadows, glare or rolling shutter. Camera height, pitch and calibration are assumed exact. Robots and balls do not occlude the tags.
+Limits:
+- The cluster's position along the CELL is derived from the manual's figures, against this simulator's proxy back panel rather than the CAD skin.
+- The simulator's Y axis is mirrored relative to the field (see above).
+- Lighting is a single directional light with no shadows, glare or rolling shutter.
+- Camera height, pitch and calibration are assumed exact.
+- Robots and balls do not occlude the tags.
 
 ## Control API
 
@@ -114,13 +114,13 @@ Methods:
 - `solve({...})`: searches for a collision-free angle for the given launch point, speed and ball type; returns `unreachable` if none exists.
 - `fire({...})`: performs one launch with the current parameters; a hit adds the ball, and the HIVE advances to its next stable pose once the threshold is reached. The API computes this instantly; the page button animates it.
 - `reset()`: restores the official starting orientation with 3 NECTAR per HIVE.
-- `localize({...})`: runs the camera at the given pose (`x`, `y`, `yawDeg` as the heading) and returns the true and estimated pose, the error, 1σ, the detected tag IDs and the rejection reasons. It also accepts `cameraHeight`, `cameraPitchDeg`, `cameraFovDeg`, `frames` and an integer `seed`; `mode: 'image'` (rendered frame and real detector) or `'geometry'`, with `pixelNoise` for geometry and `sensorNoise`, `exposureGain`, `exposureMs`, `driveSpeed`, `turnRateDegS`, `k1`, `defocus`, `decimate` for image mode. `tagSet` (`'auto'`, `'all'`, `'wall'`, `'frame'`) and `wallTagErrorCm` select the tags and wall tag error. The result adds `mode`, `gate`, `aim` (`yawErrDeg`, `lateralAtTarget`, `rangeError`), `usedTagIds`, `timing` and `missedTagIds`. Image mode needs the detector: `await HiveControl.whenDetectorReady()` first.
+- `localize({...})`: runs the camera at the given pose (`x`, `y`, `yawDeg` as the heading) and returns the true and estimated pose, the error, 1σ, the detected tag IDs and the rejection reasons. It also accepts `cameraHeight`, `cameraPitchDeg`, `cameraFovDeg`, `frames` and an integer `seed`; `mode: 'image'` (rendered frame and real detector) or `'geometry'`, with `pixelNoise` for geometry and `sensorNoise`, `exposureGain`, `exposureMs`, `driveSpeed`, `turnRateDegS`, `k1`, `defocus`, `decimate` for image mode. `resolution` is `'640x480'`, `'1280x720'` or `'1280x800'`. The result adds `mode`, `gate`, `aim` (`yawErrDeg`, `lateralAtTarget`, `rangeError`), `hiveUp` (which CELL of each HIVE the tags say is up, or null if unseen), `timing` and `missedTagIds`. Image mode needs the detector: `await HiveControl.whenDetectorReady()` first.
 - `solve({..., useVision: true})`: aims from the vision estimate; the result's `vision` field gives the estimate and its error.
 - `getTags()`: the tag layout in use.
 
 Collision `kind` values returned by the API (`封闭背板` closed back panel, `侧面` side panel, `开口边框` opening rim, `内壁 n` inner wall n) are fixed identifiers and do not change with the page language.
 
-Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API, vision aiming, the Chinese and English page text and the keyboard controls. Run `node localization.test.js` to check exact pose recovery without noise, covariance calibration, multi-frame fusion, outlier rejection, the frame tags, Auto tag choice versus walls only under wall tag error, the quality gate, the detector's rejection reasons and the image pipeline: the real detector on rendered frames, corner order, distortion and motion blur.
+Run `node collision.test.js` to check collisions, nearest-HIVE selection, auto-aiming, re-aiming after a tip, the control API, vision aiming, the Chinese and English page text and the keyboard controls. Run `node localization.test.js` to check exact pose recovery without noise, covariance calibration, multi-frame fusion, outlier rejection, the official tag layout (IDs, spacing, order, tipping with the HIVE), HIVE-pose recovery, the heading-scan initial pose, the quality gate, the detector's rejection reasons and the image pipeline: the real detector on rendered frames, corner order, decimate and resolution, distortion and motion blur.
 
 ## Check against official sources (2026-27 Competition Manual TU02)
 

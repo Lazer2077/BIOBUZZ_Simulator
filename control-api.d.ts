@@ -19,8 +19,7 @@ export interface ShotInput {
   pixelNoise?: number;     // corner noise σ, px
   frames?: number;         // frames fused per estimate
   seed?: number;           // integer noise seed
-  tagSet?: 'auto' | 'all' | 'wall' | 'frame'; // auto: frame tags whenever one is seen, else all
-  wallTagErrorCm?: number; // σ of wall tag placement error relative to the HIVE
+  resolution?: '640x480' | '1280x720' | '1280x800';
   mode?: 'image' | 'geometry'; // rendered frame + AprilTag detector, or projected corners + noise
   sensorNoise?: number;    // image mode: Gaussian read noise, gray levels
   exposureGain?: number;
@@ -34,20 +33,23 @@ export interface ShotInput {
 
 export type TagRejection = 'behind' | 'range' | 'angle' | 'fov' | 'small' | 'occluded' | 'dropout';
 export interface Pose2D { x: number; y: number; headingDeg: number }
-export interface FieldTag { id: number; group: 'wall' | 'frame'; x: number; y: number; z: number; yawDeg: number; size: number }
+export interface FieldTag {  // Manual §9.9: IDs 30–45, 3.25 in, four per CELL bottom; moves when the HIVE tips
+  id: number; hive: 'red' | 'blue'; side: -1 | 1; cluster: string; x: number; y: number; z: number; size: number;
+  normal: Vec3; up: Vec3;  // tag faces along normal; up points to its top edge
+}
 export interface QualityGate { ok: boolean; blurPx: number; reasons: ('blur' | 'singleFarTag' | 'none')[] }
 export interface Localization {
   mode: 'image' | 'geometry';
   gate: QualityGate | null;
   aim: { yawErrDeg: number; lateralAtTarget: number; rangeError: number } | null; // effect of the pose error on the shot
-  usedTagIds: number[];    // tags the solver used (see tagSet)
+  hiveUp: { red: -1 | 1 | null; blue: -1 | 1 | null } | null; // upward CELL side per HIVE from the best-fitting layout
   timing: { renderMs: number; detectMs: number } | null; // image mode
   missedTagIds: number[];  // image mode: in view geometrically but not detected
   truth: Pose2D;
   estimate: (Pose2D & { std: { x: number; y: number; headingDeg: number } | null; rmsPx: number; outlierTagIds: number[] }) | null;
   error: { x: number; y: number; position: number; headingDeg: number } | null;
   detectedTagIds: number[];
-  rejected: { id: number; reason: TagRejection | 'hamming' | 'margin' | 'unknown' | 'unused' }[]; // image mode lists discarded decodes
+  rejected: { id: number; reason: TagRejection | 'hamming' | 'margin' | 'unknown' }[]; // image mode lists discarded decodes
   framesUsed: number;
   detections: { id: number; corners: { u: number; v: number }[]; ideal: { u: number; v: number }[] }[];
 }

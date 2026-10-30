@@ -5,9 +5,8 @@
 (function(root){
 'use strict';
 const DEG=Math.PI/180,IN=.0254;
-// Placeholder: the BIOBUZZ manual's tag size and positions were not available; edit TAG_SIZE and defaultTags to match the real field.
-const TAG_SIZE=6.5*IN,WALL_TAG_Z=.2;
-
+// Competition Manual §9.9: 3.25 in tag36h11 tags.
+const TAG_SIZE=3.25*IN;
 const dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z,sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z});
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
 
@@ -15,25 +14,38 @@ function defaultCamera(){return {imageWidth:640,imageHeight:480,hfovDeg:70,mount
  maxRange:4.5,minTagPixels:10,maxViewAngleDeg:75,edgeMargin:2}}
 function intrinsics(cam){let fx=cam.imageWidth/2/Math.tan(cam.hfovDeg*DEG/2);return {fx,fy:fx,cx:cam.imageWidth/2,cy:cam.imageHeight/2}}
 
-// Three tags on each perimeter wall, facing into the field. IDs 1–3 on +Y, 4–6 on −X, 7–9 on −Y, 10–12 on +X.
-function wallTags(half=72*IN,z=WALL_TAG_Z,size=TAG_SIZE){let tags=[],id=1;
- for(const [wx,wy,yawDeg] of [[0,1,-90],[-1,0,0],[0,-1,90],[1,0,180]])for(const along of [-1.2,0,1.2])
-  tags.push({id:id++,group:'wall',x:wx?wx*half:along,y:wy?wy*half:along,z,yawDeg,size});
- return tags}
-// Placeholder: one tag on the outer face of each HIVE frame leg (the frame does not tip), facing the shooting side the
-// leg is on, IDs 13–16. Mounted below the CELLs, they stay visible from a low camera and, being next to the target,
-// constrain the robot's bearing and range to the HIVE directly.
-const FRAME_W=49.46*IN,FRAME_D=38.95*IN,PIVOT_Z=43.95*IN,LEG_RADIUS=.5*IN,FRAME_TAG_Z=.45;
-// The legs lean in toward the pivot, so the plate stands off far enough to clear the leg at the tag's lower white edge.
-function frameTags(size=TAG_SIZE,z=FRAME_TAG_Z){let tags=[],id=13,f=1-z/PIVOT_Z,bottom=1-(z-size*5/8)/PIVOT_Z;
- for(const sy of [1,-1])for(const sx of [-1,1])tags.push({id:id++,group:'frame',x:sx*FRAME_W/2*f,y:sy*(FRAME_D/2*bottom+LEG_RADIUS+.01),z,yawDeg:sy*90,size});
- return tags}
-function defaultTags(){return [...wallTags(),...frameTags()]}
+// Official layout (Competition Manual TU07 §9.9, Figures 9-15 to 9-17): each CELL carries one AprilTag Cluster of
+// four tags on its bottom face (the outside of the back panel), facing away from the opening, with the sticker's
+// bottom edge toward the field centre. Tag centres sit ±2.75 in and ±6.5 in from the cluster centre along X, and
+// 0.188 in from the back panel's middle toward its front (flat) edge: the reference holes are 9.938 in from the front
+// edge and the tag centreline is 2.75 in above them.
+// The simulator's +Y is the audience side: in Figure 9-17 the starting NECTAR (upward CELLs) are in the red audience
+// CELL and the blue far CELL, which here are red +Y and blue −Y. That makes the simulator frame a mirror image of the
+// field in Y, so the IDs follow Figure 9-17's left-to-right order along X, and each tag is drawn readable from below.
+const HIVE_OFFSET=25.5*IN/2,CELL_OFFSET=.4075,PIVOT_Z=43.95*IN,OPENING_Z=1.5003,CELL_PITCH=Math.PI/3,CELL_DEPTH=12*IN,CLUSTER_V=-.188*IN;
+const CLUSTER_IDS={red:{'-1':[33,32,31,30],'1':[34,35,36,37]},blue:{'-1':[45,44,43,42],'1':[38,39,40,41]}},CLUSTER_X=[-6.5,-2.75,2.75,6.5].map(v=>v*IN);
+// A CELL's frame in its current pose, as index.html's cellGeometry/restCellGeometry: origin at the opening centre,
+// normal out of the opening, tangent along the opening from the flat edge toward the apex.
+function cellFrame(name,s,up){let x=name==='red'?-HIVE_OFFSET:HIVE_OFFSET,o={x,y:s*CELL_OFFSET,z:OPENING_Z},n={x:0,y:s*Math.sin(CELL_PITCH),z:Math.cos(CELL_PITCH)},t={x:0,y:-s*Math.cos(CELL_PITCH),z:Math.sin(CELL_PITCH)};
+ if(s===up)return {origin:o,normal:n,tangent:t};let phi=s*Math.PI/3,co=Math.cos(phi),si=Math.sin(phi),v=o.z-PIVOT_Z,dir=d=>({x:d.x,y:d.y*co+d.z*si,z:d.z*co-d.y*si});
+ return {origin:{x,y:o.y*co+v*si,z:PIVOT_Z+v*co-o.y*si},normal:dir(n),tangent:dir(t)}}
+// All 16 tags for given upward sides ({red: ±1, blue: ±1}); the official start is red +1, blue −1.
+function defaultTags(hiveUp={red:1,blue:-1}){let tags=[];
+ for(const name of ['red','blue'])for(const s of [-1,1]){let f=cellFrame(name,s,hiveUp[name]),c={x:f.origin.x,y:f.origin.y+f.tangent.y*CLUSTER_V-f.normal.y*(CELL_DEPTH+.002),z:f.origin.z+f.tangent.z*CLUSTER_V-f.normal.z*(CELL_DEPTH+.002)};
+  let normal={x:-f.normal.x,y:-f.normal.y,z:-f.normal.z},up={x:-f.tangent.x,y:-f.tangent.y,z:-f.tangent.z};
+  CLUSTER_IDS[name][s].forEach((id,k)=>tags.push({id,hive:name,side:s,cluster:`${name}${s>0?'+':'-'}`,x:c.x+CLUSTER_X[k],y:c.y,z:c.z,normal,up,size:TAG_SIZE}))}
+ return tags.sort((a,b)=>a.id-b.id)}
+// The four combinations of HIVE poses, for when the robot must tell from the tags which way each HIVE is tipped.
+function hiveLayouts(){return [1,-1].flatMap(r=>[1,-1].map(b=>({hiveUp:{red:r,blue:b},tags:defaultTags({red:r,blue:b})})))}
 
+// Tag frame: outward normal n, up u (toward the tag's top edge) and right r = u × n as seen from in front.
+// Tags without explicit vectors are vertical, facing yawDeg.
+function tagFrame(tag){let n=tag.normal,u=tag.up;if(!n){let a=tag.yawDeg*DEG;n={x:Math.cos(a),y:Math.sin(a),z:0};u={x:0,y:0,z:1}}
+ return {n,u,r:{x:u.y*n.z-u.z*n.y,y:u.z*n.x-u.x*n.z,z:u.x*n.y-u.y*n.x}}}
 // Corners in the order bottom-left, bottom-right, top-right, top-left as seen from in front of the tag.
-function tagCorners(tag){let a=tag.yawDeg*DEG,nx=Math.cos(a),ny=Math.sin(a),h=tag.size/2,rx=-ny*h,ry=nx*h;
- return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>({x:tag.x+i*rx,y:tag.y+i*ry,z:tag.z+j*h}))}
-function tagNormal(tag){let a=tag.yawDeg*DEG;return {x:Math.cos(a),y:Math.sin(a),z:0}}
+function tagCorners(tag){let {u,r}=tagFrame(tag),h=tag.size/2;
+ return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>({x:tag.x+(i*r.x+j*u.x)*h,y:tag.y+(i*r.y+j*u.y)*h,z:tag.z+(i*r.z+j*u.z)*h}))}
+function tagNormal(tag){return tagFrame(tag).n}
 
 function cameraPose(robot,cam){let th=robot.headingDeg*DEG,psi=th+cam.yawOffsetDeg*DEG,p=cam.pitchDeg*DEG,cp=Math.cos(p),sp=Math.sin(p);
  return {C:{x:robot.x+Math.cos(th)*cam.mountForward-Math.sin(th)*cam.mountLeft,y:robot.y+Math.sin(th)*cam.mountForward+Math.cos(th)*cam.mountLeft,z:cam.mountHeight},
@@ -66,17 +78,24 @@ function solve3(A,b){let m=A.map((row,i)=>[...row,b[i]]);
  return m.map((row,i)=>row[3]/row[i])}
 function inverse3(A){let cols=[0,1,2].map(j=>solve3(A,[0,1,2].map(i=>i===j?1:0)));return cols.every(Boolean)?[0,1,2].map(i=>cols.map(c=>c[i])):null}
 
-// Closed-form initial pose. Each vertical tag edge has a known length, so the elevation difference between its two
-// corner rays gives its horizontal range regardless of camera height; the edges' robot-frame positions are then
-// registered to their field positions with a 2D Procrustes fit.
-function initialPose(obs,cam,K){let p=cam.pitchDeg*DEG,cp=Math.cos(p),sp=Math.sin(p),yo=cam.yawOffsetDeg*DEG,pairs=[];
- const ray=q=>{let xn=(q.u-K.cx)/K.fx,yn=(q.v-K.cy)/K.fy;return {f:yn*sp+cp,l:-xn,up:-yn*cp+sp}};
- for(const o of obs)for(const [b,t] of [[0,3],[1,2]]){let rb=ray(o.corners[b]),rt=ray(o.corners[t]),tanB=rb.up/Math.hypot(rb.f,rb.l),tanT=rt.up/Math.hypot(rt.f,rt.l);
-  if(tanT-tanB<=1e-9)continue;let rho=(o.world[t].z-o.world[b].z)/(tanT-tanB),az=Math.atan2(rb.l/Math.hypot(rb.f,rb.l)+rt.l/Math.hypot(rt.f,rt.l),rb.f/Math.hypot(rb.f,rb.l)+rt.f/Math.hypot(rt.f,rt.l));
-  let f=rho*Math.cos(az),l=rho*Math.sin(az);pairs.push({p:{x:f*Math.cos(yo)-l*Math.sin(yo)+cam.mountForward,y:f*Math.sin(yo)+l*Math.cos(yo)+cam.mountLeft},q:{x:(o.world[b].x+o.world[t].x)/2,y:(o.world[b].y+o.world[t].y)/2}})}
- if(pairs.length<2)return null;let n=pairs.length,pc={x:0,y:0},qc={x:0,y:0};for(const {p,q} of pairs){pc.x+=p.x/n;pc.y+=p.y/n;qc.x+=q.x/n;qc.y+=q.y/n}
- let sxx=0,sxy=0;for(const {p,q} of pairs){let a={x:p.x-pc.x,y:p.y-pc.y},c={x:q.x-qc.x,y:q.y-qc.y};sxx+=a.x*c.x+a.y*c.y;sxy+=a.x*c.y-a.y*c.x}
- let th=Math.atan2(sxy,sxx);return [qc.x-(Math.cos(th)*pc.x-Math.sin(th)*pc.y),qc.y-(Math.sin(th)*pc.x+Math.cos(th)*pc.y),th]}
+// Initial pose for tags in any orientation. With the camera height and pitch known, fixing the heading fixes every
+// corner's viewing ray in the field, and the camera position then follows from a linear least-squares fit of those
+// rays through the known corners. The heading is scanned in 2° steps and the best bracket narrowed by golden-section
+// search, which is exact without noise and needs only one tag.
+function initialPose(obs,cam,K){let pts=[];for(const o of obs)o.corners.forEach((q,i)=>pts.push({P:o.world[i],xn:(q.u-K.cx)/K.fx,yn:(q.v-K.cy)/K.fy}));
+ if(pts.length<4)return null;
+ const fit=th=>{let pose=cameraPose({x:0,y:0,headingDeg:th/DEG},cam),A=[0,0,0],b=[0,0],eqs=[];
+  for(const {P,xn,yn} of pts){let d={x:pose.f.x+xn*pose.r.x+yn*pose.d.x,y:pose.f.y+xn*pose.r.y+yn*pose.d.y,z:pose.f.z+xn*pose.r.z+yn*pose.d.z},l=Math.hypot(d.x,d.y,d.z);d={x:d.x/l,y:d.y/l,z:d.z/l};
+   let q=sub(P,pose.C);for(const [a1,a2,rhs] of [[0,-d.z,q.z*d.y-q.y*d.z],[d.z,0,q.x*d.z-q.z*d.x],[-d.y,d.x,q.y*d.x-q.x*d.y]]){A[0]+=a1*a1;A[1]+=a1*a2;A[2]+=a2*a2;b[0]+=a1*rhs;b[1]+=a2*rhs;eqs.push([a1,a2,rhs])}
+   }
+  let det=A[0]*A[2]-A[1]*A[1];if(Math.abs(det)<1e-15)return {cost:Infinity};let x=(b[0]*A[2]-b[1]*A[1])/det,y=(A[0]*b[1]-A[1]*b[0])/det,cost=0;
+  for(const [a1,a2,rhs] of eqs)cost+=(a1*x+a2*y-rhs)**2;
+  // Reject headings that put the tags behind the camera.
+  for(const {P} of pts){let c=toCamera(P,{...pose,C:{x:pose.C.x+x,y:pose.C.y+y,z:pose.C.z}});if(c.z<=0){cost+=1e3;break}}
+  return {cost,x,y}};
+ let best=0,bestCost=Infinity,step=2*DEG;for(let th=-Math.PI;th<Math.PI;th+=step){let c=fit(th).cost;if(c<bestCost){bestCost=c;best=th}}
+ let a=best-step,b=best+step,g=(Math.sqrt(5)-1)/2;for(let k=0;k<60;k++){let c1=b-g*(b-a),c2=a+g*(b-a);if(fit(c1).cost<fit(c2).cost)b=c2;else a=c1}
+ let th=(a+b)/2,f=fit(th);return Number.isFinite(f.cost)?[f.x,f.y,wrap(th)]:null}
 
 // Levenberg–Marquardt on the corner reprojection error over (x, y, heading), with Huber weights.
 function refine(obs,cam,K,start,maxIterations,huberPx){
@@ -137,31 +156,27 @@ function createPoseFilter({processStd={xy:.02,headingDeg:1},measurementFloor={xy
    s=s.map((v,i)=>v+Kg[i].reduce((acc,k,j)=>acc+k*y[j],0));s[2]=wrap(s[2]);
    P=P.map((row,i)=>row.map((v,j)=>v-[0,1,2].reduce((acc,k)=>acc+Kg[i][k]*P[k][j],0)));return this.state}}}
 
-// Detect over several frames (independent pixel noise, robot static) and fuse the per-frame estimates.
-// Wall tags as actually mounted relative to the HIVE: each is shifted along and across the wall by N(0, σ) and turned by
-// N(0, 20°/m·σ), modelling field assembly tolerance and HIVE placement. Height is left exact: with the camera near tag
-// height the solver ranges from elevation, so a height error of a few cm would dominate everything else.
-// Frame tags move with the HIVE and stay exact.
-function perturbTags(tags,{sigma=0,seed=1,group='wall'}={}){if(!(sigma>0))return tags;let random=rng(seed*7+3);
- return tags.map(t=>{if(t.group!==group)return t;let a=t.yawDeg*DEG,along=sigma*random.gauss(),across=sigma*random.gauss();
-  return {...t,x:t.x-Math.sin(a)*along+Math.cos(a)*across,y:t.y+Math.cos(a)*along+Math.sin(a)*across,yawDeg:t.yawDeg+20*sigma*random.gauss()}})}
+// Solves against each candidate layout (the HIVE pose combinations) and keeps the best: a wrong HIVE pose puts a
+// cluster in the wrong place and orientation, so it either fits badly or loses that cluster's tags as outliers.
+function estimateBest(detections,{layouts,...options}){let best=null;
+ for(const layout of layouts){let e=estimate(detections,{...options,tags:layout.tags});if(!e)continue;
+  if(!best||e.outlierTagIds.length<best.estimate.outlierTagIds.length||e.outlierTagIds.length===best.estimate.outlierTagIds.length&&e.rmsPx<best.estimate.rmsPx)best={estimate:e,layout}}
+ // A HIVE none of whose tags were seen stays undetermined.
+ if(best){let seen=new Set(best.layout.tags.filter(t=>best.estimate.tagIds.includes(t.id)).map(t=>t.hive));
+  best={...best,layout:{...best.layout,hiveUp:Object.fromEntries(Object.entries(best.layout.hiveUp||{}).map(([k,v])=>[k,seen.has(k)?v:null]))}}}
+ return best}
 
-// Which tags of the layout the solver uses: 'all', 'wall', 'frame', or 'auto', which aims from the frame tags alone
-// whenever any is in view (they sit on the target, so wall-tag mounting error cannot bias the aim; a lone frame tag
-// is close enough to give a sound pose, and the quality gate still rejects one beyond 1.5 m) and otherwise uses every tag.
-function selectTags(layout,use,detectedIds){if(use==='wall'||use==='frame')return layout.filter(t=>t.group===use);
- if(use==='auto'){let frame=layout.filter(t=>t.group==='frame');if(frame.some(t=>detectedIds.includes(t.id)))return frame}return layout}
-
-// tags are where the tags really are (what the camera sees); layout is where the solver believes they are, so a
-// perturbed tags list models mounting error. The tag choice is made on the first frame and kept for the rest.
-function localize({robot,camera,tags=defaultTags(),layout=tags,use='all',pixelNoise=.5,seed=1,frames=1,dropout=0,occluded=null}={}){
- let filter=createPoseFilter(),last=null,frameEstimates=[],mapTags=layout;
+// Detect over several frames (independent pixel noise, robot static) and fuse the per-frame estimates. tags are where
+// the tags really are; layouts are the candidate maps the solver may use, chosen on the first frame.
+function localize({robot,camera,tags=defaultTags(),layouts=[{tags}],pixelNoise=.5,seed=1,frames=1,dropout=0,occluded=null}={}){
+ let filter=createPoseFilter(),last=null,frameEstimates=[],chosen=null;
  for(let k=0;k<Math.max(1,frames|0);k++){last=detect({robot,camera,tags,pixelNoise,seed:seed+k*7919,dropout,occluded});
-  if(!k)mapTags=selectTags(layout,use,last.detections.map(d=>d.id));let e=estimate(last.detections,{camera:last.camera,tags:mapTags});frameEstimates.push(e);if(e)filter.update(e)}
+  let e;if(!chosen){let best=estimateBest(last.detections,{camera:last.camera,layouts});chosen=best&&best.layout;e=best&&best.estimate}else e=estimate(last.detections,{camera:last.camera,tags:chosen.tags});
+  frameEstimates.push(e);if(e)filter.update(e)}
  let fused=filter.state,est=fused&&{...frameEstimates.filter(Boolean).pop(),x:fused.x,y:fused.y,headingDeg:fused.headingDeg,std:fused.std,covariance:fused.covariance};
- return {estimate:est,mapTagIds:mapTags.map(t=>t.id),detections:last.detections,rejected:last.rejected,camera:last.camera,cameraPose:last.cameraPose,framesUsed:frameEstimates.filter(Boolean).length,
+ return {estimate:est,hiveUp:chosen&&chosen.hiveUp,detections:last.detections,rejected:last.rejected,camera:last.camera,cameraPose:last.cameraPose,framesUsed:frameEstimates.filter(Boolean).length,
   error:est?{x:est.x-robot.x,y:est.y-robot.y,position:Math.hypot(est.x-robot.x,est.y-robot.y),headingDeg:wrap((est.headingDeg-robot.headingDeg)*DEG)/DEG}:null}}
 
-const api={TAG_SIZE,defaultCamera,defaultTags,wallTags,frameTags,perturbTags,selectTags,intrinsics,tagCorners,cameraPose,project,toCamera,detect,estimate,localize,createPoseFilter,qualityGate};
+const api={TAG_SIZE,defaultCamera,defaultTags,hiveLayouts,cellFrame,tagFrame,estimateBest,intrinsics,tagCorners,cameraPose,project,toCamera,detect,estimate,localize,createPoseFilter,qualityGate};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.FiducialLocalizer=api;
 })(typeof window!=='undefined'?window:globalThis);
