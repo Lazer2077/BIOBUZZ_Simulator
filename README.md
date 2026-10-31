@@ -90,13 +90,13 @@ Green: accepted detections (raw corners; m is the decision margin). Orange: disc
     The rendered image with the real detector gives the same picture (−3°: 0/6 against 6/6). Estimating pitch also absorbs most of a camera height error (+3 cm: 6 cm → 1.2 cm). With exact calibration it costs almost nothing (0.6 → 0.7 cm RMS). From a single tag it is slightly worse, but the quality gate rejects a lone distant tag anyway.
   - **Uncertainty:** the 1σ comes from `s²(JᵀJ)⁻¹`. In image mode it also includes a 0.3 px per-corner bias floor that frame averaging does not remove.
   - **Fusion:** several frames (fresh sensor noise each, robot static) are fused with a Kalman filter that also takes odometry.
-- **When only one cluster is visible** (one of them covered, or out of frame): six red shooting positions, camera tilted 2°, corner noise 1 px, one frame, vision aim:
+- **When only one cluster is visible** (one of them covered, or out of frame). Camera tilted 2° from its calibration, corner noise 1 px, one frame. The first two columns come from shooting positions at 0.8–2.4 m and 30–150° around the red target, with the other cluster removed from the same detections. The last column comes from vision-aimed shots in the page from seven red positions, with the other cluster hidden:
 
     | Visible | Aim direction error, max | Range error, max | Shots scoring |
     |---|---|---|---|
-    | both clusters | 0.16° | 1.5 cm | all |
-    | only the cluster under the target CELL (34–37) | 0.14° | 5 cm | all that saw it (30/42; the other 12 positions saw no tag at all) |
-    | only the far cluster (30–33) | 1.8° (3.6° at 2 px) | 10 cm | 42/42 |
+    | both clusters | 0.16° | 1.5 cm | 42/42 |
+    | only the cluster under the target CELL (34–37) | 0.14° | 5.1 cm | 30/42; the other 12 saw no tag at all |
+    | only the far cluster (30–33) | 1.45° | 10.1 cm | 42/42 (still 42/42 at 2 px) |
 
   The cluster under the target CELL sits on the target itself, so it keeps the aim direction accurate even alone; four coplanar tags pin the range less well, especially with pitch also free. The far cluster alone is the weakest case. It is also the common one up close: with a 10° camera pitch, the cluster under the target leaves the top of the frame within about 1.2 m. **Tilt the camera up about 25°** and both clusters stay in view from 0.8 to 2 m. An IMU pitch reading used as a tighter pitch prior (±0.5°) helps only a little (far cluster only: 12.9 → 10.2 cm worst position error).
 - **Quality gate:** an estimate is not used in two cases. One is when the expected motion blur `fx·|ω|·T + fx·|v|·T/1.5` exceeds 2 px. The other is when only one tag is seen and it is more than 1.5 m away. The reprojection residual does not reveal either failure.
