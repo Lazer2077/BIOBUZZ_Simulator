@@ -45,6 +45,7 @@
 <div class="field"><label for="defocus" data-i18n="defocus">失焦模糊 σ (px)</label><input id="defocus" type="number" min="0" max="4" step="0.1" value="0"></div>
 <div class="field"><label for="decimate" data-i18n="decimate">检测降采样 decimate</label><input id="decimate" type="number" min="1" max="4" step="0.5" value="1"></div>
 </details>
+<div class="field"><label for="hiddenTags" data-i18n="hiddenTags">遮挡的标签 ID</label><input id="hiddenTags" type="text" placeholder="31,32,33" value=""></div>
 <label class="check"><input id="visionAim" type="checkbox"><span data-i18n="visionAim">用视觉估计的位姿瞄准</span></label>
 <button id="resample" data-i18n="resample">重新采样噪声</button>
 <div class="result" id="visionResult"></div>
@@ -64,7 +65,7 @@ const pivotZ=43.95*IN, frameW=49.46*IN, frameD=38.95*IN;
 const hiveOffset=25.5*IN/2, cellOffset=.4075;
 const lowOpening=53.5*IN, highOpening=65.6*IN;
 const openingZ=1.5003, pitch=Math.PI/3, shoulder=-H/2+7.61*IN;
-const ids=['team','state','x','y','z','speed','angle','yaw','diameter','drag','threshold','camHeight','camPitch','pitchError','estimatePitch','camRes','camFov','pixelNoise','frames','visionAim','visionMode','sensorNoise','exposureGain','exposureMs','driveSpeed','turnRate','k1','defocus','decimate'];
+const ids=['team','state','x','y','z','speed','angle','yaw','diameter','drag','threshold','camHeight','camPitch','pitchError','estimatePitch','camRes','camFov','pixelNoise','frames','visionAim','visionMode','hiddenTags','sensorNoise','exposureGain','exposureMs','driveSpeed','turnRate','k1','defocus','decimate'];
 const el=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
 const scene=document.getElementById('scene'),side=document.getElementById('side'),cameraView=document.getElementById('camera'),visionResult=document.getElementById('visionResult'),result=document.getElementById('result'),balance=document.getElementById('balance');
 const fixedElevation=.39, ballMass={pollen:.055*.45359237,nectar:.091*.45359237},lever=.392;
@@ -81,7 +82,7 @@ const I18N={
   collided:k=>`碰到 CELL ${k}，投射失败`,collisionTime:'碰撞时间：',collisionAt:'碰撞位置 ',retained:'命中开口并留在 CELL',notRetained:'进入开口，但未留在 CELL',notEntered:'未进入开口',crossing:'穿越开口平面：',crossPoint:'交点 ',offset:'相对开口中心：',
   escaped:'从开口弹出；',settled:'已在腔体内静止；',unsettled:'在追踪时限内尚未稳定；',contacts:(n,list)=>`内部碰撞 ${n} 次；前三次：${list||'无'}`,listSep:'、',noCross:'未穿越开口平面',closest:d=>`轨迹距目标中心最近约 ${d} cm`,
   hive:n=>n==='red'?'红 HIVE':'蓝 HIVE',balance:(up,nectar,pollen,tips)=>`：朝上 ${up}，${nectar} NECTAR + ${pollen} POLLEN，翻转 ${tips} 次`,torque:'附加力矩 ',falling:' · 正在下坠',noSolution:'当前初速下没有找到可进入开口的角度；试着提高初速或调整发射点。',
-  vision:'相机 / AprilTag 定位',camHeight:'相机高度 (m)',camRes:'分辨率',pitchError:'实际俯仰偏差 (°)',estimatePitch:'同时估计相机俯仰（±3° 先验）',pitchLine:(est,cal,act)=>`相机俯仰：估计 ${est}°（标定 ${cal}°，实际 ${act}°）`,camPitch:'相机俯仰 (°，向上为正)',camFov:'水平视场角 (°)',pixelNoise:'角点噪声 σ (px)',frames:'融合帧数',visionAim:'用视觉估计的位姿瞄准',resample:'重新采样噪声',cameraView:'机器人相机画面（模拟）',
+  vision:'相机 / AprilTag 定位',camHeight:'相机高度 (m)',camRes:'分辨率',pitchError:'实际俯仰偏差 (°)',hiddenTags:'遮挡的标签 ID',estimatePitch:'同时估计相机俯仰（±3° 先验）',pitchLine:(est,cal,act)=>`相机俯仰：估计 ${est}°（标定 ${cal}°，实际 ${act}°）`,camPitch:'相机俯仰 (°，向上为正)',camFov:'水平视场角 (°)',pixelNoise:'角点噪声 σ (px)',frames:'融合帧数',visionAim:'用视觉估计的位姿瞄准',resample:'重新采样噪声',cameraView:'机器人相机画面（模拟）',
   cameraLegend:'相机装在发射器上，机器人朝向等于水平角。标签按竞赛手册 §9.9：16 个 3.25 in 的 36h11 标签（ID 30–45），每个 CELL 底面一组 4 个，随 HIVE 翻转。图像模式：软件渲染灰度图（地垫、围墙、标签、HIVE 和支架，可加运动模糊、镜头畸变、失焦和传感器噪声），再由编译成 WebAssembly 的 AprilRobotics 检测器（FTC SDK 用的同一个库）检测。绿色：采用的检测（原始角点，m 为解码余量）；橙色：丢弃的解码；红色虚线：几何上可见但没检出。几何模式：直接投影角点并加噪声，速度快。',
   reasons:{behind:'在相机后方',range:'超出距离',angle:'视角过斜',fov:'超出画面',small:'像素太小',occluded:'被遮挡',dropout:'丢帧'},
   visionSeen:(n,list)=>`检测到 ${n} 个标签：${list||'无'}`,visionNone:'没有可用的标签，无法定位',visionRejected:list=>`被拒绝：${list}`,
@@ -102,7 +103,7 @@ const I18N={
   collided:k=>`Hit the CELL ${k}; shot failed`,collisionTime:'Contact time: ',collisionAt:'Contact at ',retained:'Entered the opening and stayed in the CELL',notRetained:'Entered the opening but did not stay in the CELL',notEntered:'Did not enter the opening',crossing:'Opening plane crossed: ',crossPoint:'Crossing ',offset:'From opening centre: ',
   escaped:'Bounced back out of the opening; ',settled:'Came to rest inside the CELL; ',unsettled:'Not yet at rest within the tracking limit; ',contacts:(n,list)=>`${n} internal contact${n===1?'':'s'}; first three: ${list||'none'}`,listSep:', ',noCross:'Did not cross the opening plane',closest:d=>`Closest approach to the target centre ≈ ${d} cm`,
   hive:n=>n==='red'?'Red HIVE':'Blue HIVE',balance:(up,nectar,pollen,tips)=>`: ${up} up, ${nectar} NECTAR + ${pollen} POLLEN, ${tips} tip${tips===1?'':'s'}`,torque:'Added torque ',falling:' · tipping',noSolution:'No angle at this launch speed enters the opening; try a higher speed or a different launch point.',
-  vision:'Camera / AprilTag localization',camHeight:'Camera height (m)',camRes:'Resolution',pitchError:'Actual pitch offset (°)',estimatePitch:'Also estimate camera pitch (±3° prior)',pitchLine:(est,cal,act)=>`Camera pitch: estimated ${est}° (calibrated ${cal}°, actual ${act}°)`,camPitch:'Camera pitch (°, up +)',camFov:'Horizontal FOV (°)',pixelNoise:'Corner noise σ (px)',frames:'Frames fused',visionAim:'Aim using the vision pose estimate',resample:'Resample noise',cameraView:'Robot camera view (simulated)',
+  vision:'Camera / AprilTag localization',camHeight:'Camera height (m)',camRes:'Resolution',pitchError:'Actual pitch offset (°)',hiddenTags:'Hidden tag IDs',estimatePitch:'Also estimate camera pitch (±3° prior)',pitchLine:(est,cal,act)=>`Camera pitch: estimated ${est}° (calibrated ${cal}°, actual ${act}°)`,camPitch:'Camera pitch (°, up +)',camFov:'Horizontal FOV (°)',pixelNoise:'Corner noise σ (px)',frames:'Frames fused',visionAim:'Aim using the vision pose estimate',resample:'Resample noise',cameraView:'Robot camera view (simulated)',
   cameraLegend:'The camera is fixed to the launcher, so the robot heading equals the yaw. Tags follow Competition Manual §9.9: sixteen 3.25 in 36h11 tags (IDs 30–45), a cluster of four on the bottom of each CELL, tipping with the HIVE. Image mode: a software-rendered grayscale frame (tiles, walls, tags, the HIVE and its frame, with optional motion blur, lens distortion, defocus and sensor noise) goes through the AprilRobotics detector compiled to WebAssembly, the same library the FTC SDK uses. Green: accepted detections (raw corners, m is the decision margin); orange: discarded decodes; red dashed: in view geometrically but missed. Geometry mode: corners are projected directly with added noise, which is fast.',
   reasons:{behind:'behind the camera',range:'out of range',angle:'too oblique',fov:'outside the image',small:'too few pixels',occluded:'occluded',dropout:'dropped frame'},
   visionSeen:(n,list)=>`${n} tag${n===1?'':'s'} detected: ${list||'none'}`,visionNone:'No usable tags; cannot localize',visionRejected:list=>`Rejected: ${list}`,
@@ -287,6 +288,9 @@ function draw(){drawScene();drawSide();drawCamera()}
 const Loc=window.FiducialLocalizer,LEG_RADIUS=.0127,WALL_H=12*IN;
 // The official tags sit on the CELLs (Manual §9.9), so they move when a HIVE tips.
 const currentTags=()=>Loc?Loc.defaultTags({red:hives.red.up,blue:hives.blue.up}):[];
+// Tags covered by something the simulator does not model (another robot, a ball, a hand) are left out of the scene.
+const hiddenIds=()=>new Set(String(el.hiddenTags?.value||'').split(/[^0-9]+/).filter(Boolean).map(Number));
+const visibleTags=()=>{let hidden=hiddenIds();return currentTags().filter(t=>!hidden.has(t.id))};
 const FRAME_LEGS=[-1,1].flatMap(sx=>[-1,1].map(sy=>[{x:sx*frameW/2,y:sy*frameD/2,z:0},{x:0,y:0,z:pivotZ}]));
 let vision=null,visionSeed=1,visionAim=null,detector=null,visionTimer=0,visionPending=false,frameCanvas=null,frameRef=null;
 const imageMode=()=>el.visionMode?.value==='image'&&Boolean(detector);
@@ -315,10 +319,10 @@ function sightBlocked(a,b){let len=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z),n=Math.ce
 // solving and the API run it synchronously.
 function updateVision(sync=false){if(!Loc){vision=null;return}
  if(imageMode()){clearTimeout(visionTimer);if(sync){visionPending=false;runImageVision();return}visionPending=true;renderVision();visionTimer=setTimeout(()=>{visionPending=false;runImageVision();draw()},180);return}
- visionPending=false;let tags=currentTags(),r=Loc.localize({robot:robotPose(),camera:trueCamera(),solverCamera:visionCamera(),pitchPriorDeg:pitchPrior(),tags,layouts:Loc.hiveLayouts(),pixelNoise:Math.max(0,num('pixelNoise')),frames:clamp(Math.round(num('frames'))||1,1,20),seed:visionSeed,occluded:sightBlocked});
+ visionPending=false;let tags=visibleTags(),r=Loc.localize({robot:robotPose(),camera:trueCamera(),solverCamera:visionCamera(),pitchPriorDeg:pitchPrior(),tags,layouts:Loc.hiveLayouts(),pixelNoise:Math.max(0,num('pixelNoise')),frames:clamp(Math.round(num('frames'))||1,1,20),seed:visionSeed,occluded:sightBlocked});
  vision={...r,mode:'geometry',trueTags:tags};renderVision()}
 function runImageVision(){let robot=robotPose(),camera=trueCamera(),frames=clamp(Math.round(num('frames'))||1,1,20);
- let tags=currentTags(),r=CameraRender.localizeFromImage({detector,robot,camera,solverCamera:visionCamera(),pitchPriorDeg:pitchPrior(),tags,layouts:Loc.hiveLayouts(),...cameraScene(),effects:imageEffects(),detectorOptions:{decimate:clamp(num('decimate')||1,1,4)},frames});
+ let tags=visibleTags(),r=CameraRender.localizeFromImage({detector,robot,camera,solverCamera:visionCamera(),pitchPriorDeg:pitchPrior(),tags,layouts:Loc.hiveLayouts(),...cameraScene(),effects:imageEffects(),detectorOptions:{decimate:clamp(num('decimate')||1,1,4)},frames});
  let expected=Loc.detect({robot,camera:r.camera,tags,pixelNoise:0,occluded:sightBlocked}).detections.map(t=>t.id),seen=new Set([...r.detections,...r.rejected].map(t=>t.id));
  vision={...r,mode:'image',trueTags:tags,missed:expected.filter(id=>!seen.has(id))};renderVision()}
 function visionGate(){if(!vision)return null;let image=vision.mode==='image';return Loc.qualityGate(vision.estimate,{camera:vision.camera,tags:vision.trueTags,turnRateDegS:image?num('turnRate'):0,speed:image?num('driveSpeed'):0,exposureMs:num('exposureMs')})}
@@ -413,6 +417,7 @@ document.getElementById('play').onclick=()=>{if(playing||hives[el.team.value].mo
 function applyControlInput(input={}){if(playing)throw new Error('Wait for the current shot animation to finish');let map={x:'x',y:'y',z:'z',speed:'speed',angleDeg:'angle',yawDeg:'yaw',drag:'drag',releaseTorque:'threshold',cameraHeight:'camHeight',cameraPitchDeg:'camPitch',cameraFovDeg:'camFov',pitchErrorDeg:'pitchError',pixelNoise:'pixelNoise',frames:'frames',sensorNoise:'sensorNoise',exposureGain:'exposureGain',exposureMs:'exposureMs',driveSpeed:'driveSpeed',turnRateDegS:'turnRate',k1:'k1',defocus:'defocus',decimate:'decimate'};
  for(let [key,id] of Object.entries(map))if(input[key]!==undefined){if(typeof input[key]!=='number'||!Number.isFinite(input[key]))throw new TypeError(`${key} must be a finite number`);el[id].value=String(input[key])}
  if(input.useVision!==undefined)el.visionAim.checked=Boolean(input.useVision);
+ if(input.hideTagIds!==undefined){if(!Array.isArray(input.hideTagIds)||!input.hideTagIds.every(Number.isInteger))throw new TypeError('hideTagIds must be an array of tag IDs');el.hiddenTags.value=input.hideTagIds.join(',')}
  if(input.estimatePitch!==undefined)el.estimatePitch.checked=Boolean(input.estimatePitch);
  if(input.resolution!==undefined){if(!['640x480','1280x720','1280x800'].includes(input.resolution))throw new TypeError('resolution must be 640x480, 1280x720 or 1280x800');el.camRes.value=input.resolution}
  if(input.mode!==undefined){if(!['image','geometry'].includes(input.mode))throw new TypeError('mode must be image or geometry');if(input.mode==='image'&&!detector)throw new Error('The AprilTag detector has not loaded; await HiveControl.whenDetectorReady()');el.visionMode.value=input.mode}

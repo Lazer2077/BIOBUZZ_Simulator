@@ -21,6 +21,7 @@ export interface ShotInput {
   seed?: number;           // integer noise seed
   resolution?: '640x480' | '1280x720' | '1280x800';
   pitchErrorDeg?: number;  // real camera pitch minus its calibration (chassis tilt, mounting error)
+  hideTagIds?: number[];   // tags left out of the scene, as if covered
   estimatePitch?: boolean; // solve camera pitch with a ±3° prior around the calibration (default true)
   mode?: 'image' | 'geometry'; // rendered frame + AprilTag detector, or projected corners + noise
   sensorNoise?: number;    // image mode: Gaussian read noise, gray levels
