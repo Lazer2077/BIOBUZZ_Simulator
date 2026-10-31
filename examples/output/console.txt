@@ -1,0 +1,11 @@
+Robot (true)      x=-0.6 m  y=1.8 m  heading=-78.7°
+Camera            640x480, HFOV 70°, height 0.3 m, pitch calibrated 10° / actual 12°
+Detected tags     31(m=137.1) 32(m=133.3) 33(m=147.1) 34(m=164.8) 35(m=151.5) 36(m=157.6) 37(m=150.6)   render 657 ms, detect 41.5 ms/frame
+Upward CELLs      red +Y, blue not seen (from the best-fitting layout)
+Estimate          x=-0.5998 m  y=1.7998 m  heading=-78.708°  pitch=12.021°
+1σ                x 0.18 cm, y 0.17 cm, heading 0.073°;  reprojection RMS 0.065 px, 3 frames
+Error             position 0.03 cm, heading -0.008°
+Aim               turn -0.08°, launch direction error 0.002° (0.01 cm sideways), range error -0.03 cm
+Quality gate      passed (motion blur 0.0 px)
+Fixed-pitch solve position error 12 cm, heading -0.44° (pitch held at the calibration)
+Wrote examples/output/camera.png, camera-zoom.png and result.json

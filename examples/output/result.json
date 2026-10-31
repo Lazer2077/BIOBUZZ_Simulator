@@ -1,0 +1,163 @@
+{
+  "scenario": {
+    "robot": {
+      "x": -0.6,
+      "y": 1.8,
+      "headingDeg": -78.7
+    },
+    "camera": {
+      "resolution": "640x480",
+      "hfovDeg": 70,
+      "heightM": 0.3,
+      "calibratedPitchDeg": 10,
+      "actualPitchDeg": 12
+    },
+    "effects": {
+      "noise": 3,
+      "exposureMs": 8,
+      "seed": 7
+    },
+    "detectorOptions": {
+      "decimate": 1
+    },
+    "hiveUp": {
+      "red": 1,
+      "blue": -1
+    }
+  },
+  "timing": {
+    "renderMs": 657,
+    "detectMsPerFrame": 41.5
+  },
+  "detections": [
+    {
+      "id": 31,
+      "decisionMargin": 137.1,
+      "hamming": 0,
+      "corners": [
+        [342.03, 202.93],
+        [324.92, 203.91],
+        [327.63, 216.17],
+        [344.29, 215]
+      ]
+    },
+    {
+      "id": 32,
+      "decisionMargin": 133.3,
+      "hamming": 0,
+      "corners": [
+        [371.78, 201.16],
+        [354.19, 202.32],
+        [356.04, 214.35],
+        [373.1, 213.72]
+      ]
+    },
+    {
+      "id": 33,
+      "decisionMargin": 147.1,
+      "hamming": 0,
+      "corners": [
+        [392.33, 200.06],
+        [374.36, 201.18],
+        [375.9, 213.62],
+        [393.11, 212.58]
+      ]
+    },
+    {
+      "id": 34,
+      "decisionMargin": 164.8,
+      "hamming": 0,
+      "corners": [
+        [359.69, 72.88],
+        [382.62, 70.34],
+        [380.86, 48.16],
+        [357.29, 51]
+      ]
+    },
+    {
+      "id": 35,
+      "decisionMargin": 151.5,
+      "hamming": 0,
+      "corners": [
+        [333.98, 75.72],
+        [356.28, 73.27],
+        [353.69, 51.43],
+        [330.6, 54.23]
+      ]
+    },
+    {
+      "id": 36,
+      "decisionMargin": 157.6,
+      "hamming": 0,
+      "corners": [
+        [297.18, 79.81],
+        [318.78, 77.46],
+        [314.82, 56.11],
+        [292.45, 58.77]
+      ]
+    },
+    {
+      "id": 37,
+      "decisionMargin": 150.6,
+      "hamming": 0,
+      "corners": [
+        [272.69, 82.58],
+        [293.88, 80.2],
+        [289.1, 59.2],
+        [267.24, 61.8]
+      ]
+    }
+  ],
+  "discarded": [],
+  "estimate": {
+    "x": -0.5998,
+    "y": 1.7998,
+    "headingDeg": -78.708,
+    "pitchDeg": 12.021,
+    "std": {
+      "xCm": 0.18,
+      "yCm": 0.17,
+      "headingDeg": 0.073
+    },
+    "reprojectionRmsPx": 0.065,
+    "tagsUsed": [
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37
+    ],
+    "outliers": [],
+    "framesFused": 3,
+    "hiveUp": {
+      "red": 1,
+      "blue": null
+    }
+  },
+  "error": {
+    "positionCm": 0.03,
+    "headingDeg": -0.008
+  },
+  "aim": {
+    "target": {
+      "x": -0.324,
+      "y": 0.407,
+      "z": 1.5
+    },
+    "robotTurnDeg": -0.08,
+    "launchDirectionErrorDeg": 0.002,
+    "sidewaysMissCm": 0.01,
+    "rangeErrorCm": -0.03
+  },
+  "gate": {
+    "ok": true,
+    "blurPx": 0,
+    "reasons": []
+  },
+  "withFixedPitch": {
+    "positionErrorCm": 12,
+    "headingErrorDeg": -0.44
+  }
+}

@@ -98,6 +98,8 @@
 - 相机高度、内参和畸变假定精确；俯仰在标定值附近估计。
 - 机器人和球不会遮挡标签。
 
+从一帧渲染图像到位姿、瞄准和标注图片的完整示例见 [`examples/`](examples/README.zh-CN.md)（`node examples/solve-example.js`）。
+
 ## 控制算法接口
 
 页面提供全局 `window.HiveControl`，输入为米、米每秒、角度、牛顿米和秒。目标 HIVE 永远按发射点 X 坐标选最近的一组。接口调用会同步更新页面控件，便于检查算法结果。

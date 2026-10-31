@@ -100,6 +100,8 @@ Limits:
 - Camera height, intrinsics and distortion are assumed exact; pitch is estimated around its calibration.
 - Robots and balls do not occlude the tags.
 
+A worked example, from one rendered frame to the pose, the aim and an annotated image, is in [`examples/`](examples/README.md) (`node examples/solve-example.js`).
+
 ## Control API
 
 The page exposes a global `window.HiveControl`. Inputs are in metres, metres per second, degrees, newton-metres and seconds. The target is always the HIVE nearest the launch point in X. API calls also update the page controls so you can inspect the result.

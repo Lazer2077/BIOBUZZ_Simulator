@@ -24,6 +24,7 @@ jobs:
           node-version: 22
       - run: node collision.test.js
       - run: node localization.test.js
+      - run: node examples/solve-example.js
 
   deploy:
     needs: test
