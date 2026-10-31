@@ -107,7 +107,7 @@
 - 相机高度、内参和畸变假定精确；俯仰在标定值附近估计。
 - 机器人和球不会遮挡标签。
 
-从一帧渲染图像到位姿、瞄准和标注图片的完整示例见 [`examples/`](examples/README.zh-CN.md)（`node examples/solve-example.js`）。
+从一帧渲染图像到位姿、瞄准和标注图片的完整示例见 [`examples/`](examples/README.zh-CN.md)（`node examples/solve-example.js`），同一目录还有全场定位精度图以及误差随视角和距离的分析（`node examples/accuracy-grid.js`）。
 
 ## 控制算法接口
 

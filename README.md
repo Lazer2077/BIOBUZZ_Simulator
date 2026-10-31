@@ -109,7 +109,7 @@ Limits:
 - Camera height, intrinsics and distortion are assumed exact; pitch is estimated around its calibration.
 - Robots and balls do not occlude the tags.
 
-A worked example, from one rendered frame to the pose, the aim and an annotated image, is in [`examples/`](examples/README.md) (`node examples/solve-example.js`).
+A worked example, from one rendered frame to the pose, the aim and an annotated image, is in [`examples/`](examples/README.md) (`node examples/solve-example.js`), together with an accuracy map of the whole field and its dependence on viewing angle and distance (`node examples/accuracy-grid.js`).
 
 ## Control API
 

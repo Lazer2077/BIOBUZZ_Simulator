@@ -44,3 +44,42 @@ How to read it:
 - **HIVE pose:** the layout that fits best has red's +Y CELL up, which is the true pose. Blue is not in view, so its pose stays unknown.
 - **Pitch:** the solver finds 12.02° although it was told 10°. The same detections solved with the pitch fixed at 10° land 12 cm off.
 - **Simulated conditions:** the near-zero error reflects ideal lighting, a known calibration (apart from pitch) and a standing robot. Change the scenario at the top of the script to try other poses, tilts, noise, resolutions or motion blur (`effects.turnRateDegS`).
+
+## Accuracy across the field
+
+```bash
+node examples/accuracy-grid.js              # about 2 minutes
+node examples/accuracy-grid.js --charts-only # redraw from output/accuracy-grid.json
+```
+
+Setup:
+- **Grid:** every 0.1 m point on the field (1201 points outside the HIVE footprint). At each point the robot faces its target, the upward CELL of the HIVE nearer in X.
+- **Camera:** 640×480, 70°, 0.30 m high, at 10° or 25° pitch.
+- **Noise and occlusion:** 1 px corner noise, 16 samples per point, one frame, pitch estimated with a ±3° prior. Occlusion uses the HIVE frame and the official CAD CELL skins.
+
+Hover a cell or a point in the SVGs for its numbers. The raw data is in [`output/accuracy-grid.json`](output/accuracy-grid.json).
+
+![Accuracy heatmaps](output/accuracy-heatmaps.svg)
+
+![Error by angle and distance](output/accuracy-by-angle.svg)
+
+| Camera pitch | Points with a tag in view | Position error RMS: median / 90th percentile | Aim direction error RMS: median / 90th percentile |
+|---|---|---|---|
+| 10° | 1168 / 1201 | 1.42 / 4.8 cm | 0.28° / 0.72° |
+| 25° | 1183 / 1201 | 0.46 / 2.7 cm | 0.05° / 0.42° |
+
+**Is the error angle-dependent?** Yes, but mostly indirectly. Angle and distance decide **how many tag clusters are in view**, and that is what sets the error:
+
+| Clusters in view (pitch 25°) | Grid points | Position error median | Aim error median |
+|---|---|---|---|
+| 1 | 208 | 2.8 cm | 0.46° |
+| 2 | 903 | 0.42 cm | 0.05° |
+| 3 | 72 | 0.26 cm | 0.05° |
+
+With two clusters in view the error is nearly flat in angle. At 1.2–1.8 m, from −10° to +110° off the opening axis, it stays at 0.42–0.56 cm and 0.05°. The error grows in three places:
+
+- **Right in front of or under the target CELL** (less than about 0.7 m horizontally): the target's own cluster is above the frame, and only 2–3 tags of the far cluster remain. Aim error is 1.3–2°.
+- **Behind the target CELL** (beyond about 115°) **and far away**: only one distant cluster is in view, at a steep angle. At 1.2–1.8 m the position error is 4.5–5.6 cm; beyond 1.8 m it is 13–20 cm, worst in the field corners (up to 31 cm with a single tag). Aim error is 0.3–0.6°.
+- **With a 10° camera pitch:** a ring 0.8–1.6 m from each target, where the target's cluster has left the top of the frame. A 25° pitch removes most of it.
+
+**What this means for shooting:** shoot from about 1.2–1.8 m, within roughly ±100° of the opening axis, with the camera at about 25°. Treat estimates from a single cluster with more caution: the quality gate passes them, but their error is 5–10 times larger.
